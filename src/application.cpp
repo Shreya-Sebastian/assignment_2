@@ -1,7 +1,6 @@
 //#include "Image.h"
 #include "mesh.h"
 #include "texture.h"
-#include "framework/Character.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
 #include <framework/disable_all_warnings.h>
@@ -18,6 +17,7 @@ DISABLE_WARNINGS_PUSH()
 DISABLE_WARNINGS_POP()
 #include <framework/shader.h>
 #include <framework/window.h>
+#include "framework/Character.h"
 #include <functional>
 #include <iostream>
 #include <vector>
@@ -27,7 +27,7 @@ public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
         , m_texture(RESOURCE_ROOT "resources/checkerboard.png")
-        , m_character(glm::vec3(0.0f, 0.0f, -5.0f))
+        , m_character(glm::vec3(0.0f, 0.0f, -1.0f))
         , m_lastFrameTime(glfwGetTime()) // Initialize last frame time with the current time
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
@@ -85,14 +85,16 @@ public:
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
             ImGui::End();
 
+
+            // I have put all this, in the render function, to differentiate between rendering and updating
             // Clear the screen
-            glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            //glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+            //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // ...
-            glEnable(GL_DEPTH_TEST);
+            //glEnable(GL_DEPTH_TEST);
 
-            const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
+            /*const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
             // Normals should be transformed differently than positions (ignoring translations + dealing with scaling):
             // https://paroj.github.io/gltut/Illumination/Tut09%20Normal%20Transformation.html
             const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix));
@@ -113,7 +115,7 @@ public:
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
                 }
                 mesh.draw(m_defaultShader);
-            }
+            }*/
 
             render();
 
@@ -176,7 +178,7 @@ private:
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
-    glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
+    glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(3.0f, 3.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 m_modelMatrix { 1.0f };
 
     // Function to calculate the delta time
@@ -188,15 +190,47 @@ private:
     }
 
     void render() {
-        // Render function implementation
+        // Clear screen and enable depth testing
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-        m_character.draw(); // Render the character
+        // Set up view-projection matrix
+        const glm::mat4 viewProjectionMatrix = m_projectionMatrix * m_viewMatrix;
 
-        // Other rendering code
+        // Bind the default shader
+        m_defaultShader.bind();
+
+        // Render the character with a base transformation
+        glm::mat4 characterModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));  // Adjust as necessary
+        glm::mat4 characterMvpMatrix = viewProjectionMatrix * characterModelMatrix;
+        glm::mat3 characterNormalMatrix = glm::inverseTranspose(glm::mat3(characterModelMatrix));
+
+        // Pass MVP and normal matrices to the shader
+        glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(characterMvpMatrix));
+        glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(characterNormalMatrix));
+
+        // Render the character
+        m_character.draw(m_defaultShader, characterModelMatrix);
+
+        // Render other objects (e.g., meshes, textures, etc.)
+        for (GPUMesh& mesh : m_meshes) {
+            if (mesh.hasTextureCoords()) {
+                m_texture.bind(GL_TEXTURE0);
+                glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
+                glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
+                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
+            }
+            else {
+                glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
+                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+            }
+            mesh.draw(m_defaultShader);
+        }
     }
 };
+
+//m_character.draw(m_defaultShader, characterBaseTransform);
 
 int main()
 {
