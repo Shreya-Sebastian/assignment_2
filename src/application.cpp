@@ -1,7 +1,6 @@
 //#include "Image.h"
 #include "mesh.h"
 #include "texture.h"
-#include "framework/Character.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
 #include <framework/disable_all_warnings.h>
@@ -27,22 +26,20 @@ public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
         , m_texture(RESOURCE_ROOT "resources/checkerboard.png")
-        , m_character(glm::vec3(0.0f, 0.0f, -5.0f))
-        , m_lastFrameTime(glfwGetTime()) // Initialize last frame time with the current time
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
                 onKeyPressed(key, mods);
             else if (action == GLFW_RELEASE)
                 onKeyReleased(key, mods);
-        });
+            });
         m_window.registerMouseMoveCallback(std::bind(&Application::onMouseMove, this, std::placeholders::_1));
         m_window.registerMouseButtonCallback([this](int button, int action, int mods) {
             if (action == GLFW_PRESS)
                 onMouseClicked(button, mods);
             else if (action == GLFW_RELEASE)
                 onMouseReleased(button, mods);
-        });
+            });
 
         m_meshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/dragon.obj");
 
@@ -62,7 +59,8 @@ public:
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
             //     VS Code: ctrl + shift + p => CMake: Configure => enter
             // ....
-        } catch (ShaderLoadingException e) {
+        }
+        catch (ShaderLoadingException e) {
             std::cerr << e.what() << std::endl;
         }
     }
@@ -71,12 +69,9 @@ public:
     {
         int dummyInteger = 0; // Initialized to 0
         while (!m_window.shouldClose()) {
-            float deltaTime = getDeltaTime();
             // This is your game loop
             // Put your real-time logic and rendering in here
             m_window.updateInput();
-
-            m_character.update(deltaTime);
 
             // Use ImGui for easy input/output of ints, floats, strings, etc...
             ImGui::Begin("Window");
@@ -108,14 +103,13 @@ public:
                     glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
-                } else {
+                }
+                else {
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
                 }
                 mesh.draw(m_defaultShader);
             }
-
-            render();
 
             // Processes input and swaps the window buffer
             m_window.swapBuffers();
@@ -166,36 +160,15 @@ private:
     // Shader for default rendering and for depth rendering
     Shader m_defaultShader;
     Shader m_shadowShader;
-    Character m_character;
 
     std::vector<GPUMesh> m_meshes;
     Texture m_texture;
-    bool m_useMaterial { true };
-
-    double m_lastFrameTime; // Track the last frame time
+    bool m_useMaterial{ true };
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
     glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
-    glm::mat4 m_modelMatrix { 1.0f };
-
-    // Function to calculate the delta time
-    float getDeltaTime() {
-        double currentTime = glfwGetTime();
-        float deltaTime = static_cast<float>(currentTime - m_lastFrameTime);
-        m_lastFrameTime = currentTime;
-        return deltaTime;
-    }
-
-    void render() {
-        // Render function implementation
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-
-        m_character.draw(); // Render the character
-
-        // Other rendering code
-    }
+    glm::mat4 m_modelMatrix{ 1.0f };
 };
 
 int main()
