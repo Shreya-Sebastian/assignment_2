@@ -11,6 +11,7 @@ layout(std140) uniform Material // Must match the GPUMaterial defined in src/mes
 uniform sampler2D colorMap;
 uniform bool hasTexCoords;
 uniform bool useMaterial;
+uniform vec3 color;
 
 in vec3 fragPosition;
 in vec3 fragNormal;
@@ -21,9 +22,16 @@ layout(location = 0) out vec4 fragColor;
 void main()
 {
     vec3 normal = normalize(fragNormal);
+    vec3 objectColor = color;
 
-
-    if (hasTexCoords)       { fragColor = vec4(texture(colorMap, fragTexCoord).rgb, 1);}
-    else if (useMaterial)   { fragColor = vec4(kd, 1);}
-    else                    { fragColor = vec4(normal, 1); } // Output color value, change from (1, 0, 0) to something else
+    if (hasTexCoords) { 
+        fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);
+        
+    }
+    //else if (useMaterial) { 
+        //fragColor = vec4(kd, 1);
+    //}
+    else { 
+        fragColor = vec4(objectColor, 1.0);
+    }
 }
