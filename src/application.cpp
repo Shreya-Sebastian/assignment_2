@@ -189,25 +189,20 @@ public:
 
 
             ShaderBuilder defaultBuilder;
-            defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
-            defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
+            defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shader_vert.glsl");
+            defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/shader_frag.glsl");
             m_defaultShader = defaultBuilder.build();
 
-            //ShaderBuilder shadowBuilder;
-            //shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
-            //shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
-            //m_shadowShader = shadowBuilder.build();
-
+            ShaderBuilder shadowBuilder;
+            shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
+            shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
+            m_shadowShader = shadowBuilder.build();
 
             //ShaderBuilder defaultBuilder;
-            //defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shader_vert.glsl");
-            //defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/shader_frag.glsl");
+            //defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            //defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
             //m_defaultShader = defaultBuilder.build();
 
-            //ShaderBuilder shadowBuilder;
-            //shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
-            //shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
-            //m_shadowShader = shadowBuilder.build();
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
