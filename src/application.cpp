@@ -1,5 +1,6 @@
 //#include "Image.h"
 #include "mesh.h"
+#include "framework/mesh.h"
 #include "texture.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
@@ -25,7 +26,9 @@ class Application {
 public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
-        , m_texture(RESOURCE_ROOT "resources/textures/checkerboard.png")
+        , m_texture(RESOURCE_ROOT "resources/textures/wall.jpeg")
+        , m_normalMap(RESOURCE_ROOT "resources/textures/normalmap.png")
+         
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
@@ -41,18 +44,31 @@ public:
                 onMouseReleased(button, mods);
             });
 
-        m_meshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/meshes/cube.obj");
+        m_meshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/meshes/cube.obj", true);
 
         try {
+
+
             ShaderBuilder defaultBuilder;
-            defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shader_vert.glsl");
-            defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/shader_frag.glsl");
+            defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
             m_defaultShader = defaultBuilder.build();
 
             ShaderBuilder shadowBuilder;
             shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
             shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
             m_shadowShader = shadowBuilder.build();
+
+
+            //ShaderBuilder defaultBuilder;
+            //defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shader_vert.glsl");
+            //defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/shader_frag.glsl");
+            //m_defaultShader = defaultBuilder.build();
+
+            //ShaderBuilder shadowBuilder;
+            //shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
+            //shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
+            //m_shadowShader = shadowBuilder.build();
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
@@ -101,15 +117,23 @@ public:
                 //glUniformMatrix4fv(m_defaultShader.getUniformLocation("modelMatrix"), 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
                 glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
                 if (mesh.hasTextureCoords()) {
+                   
                     m_texture.bind(GL_TEXTURE0);
                     glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
+
+                    m_normalMap.bind(GL_TEXTURE1);
+                    glUniform1i(m_defaultShader.getUniformLocation("normalMap"), 1);
+                    glUniform1i(m_defaultShader.getUniformLocation("hasNormalMap"), GL_TRUE);
+
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
                 }
                 else {
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
+                    glUniform1i(m_defaultShader.getUniformLocation("hasNormalMap"), GL_FALSE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
                 }
+
                 mesh.draw(m_defaultShader);
             }
 
@@ -158,6 +182,8 @@ public:
 
 private:
     Window m_window;
+    
+
 
     // Shader for default rendering and for depth rendering
     Shader m_defaultShader;
@@ -165,6 +191,7 @@ private:
 
     std::vector<GPUMesh> m_meshes;
     Texture m_texture;
+    Texture m_normalMap;
     bool m_useMaterial{ true };
 
     // Projection and view matrices for you to fill in and use
