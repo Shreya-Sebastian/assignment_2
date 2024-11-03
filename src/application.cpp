@@ -54,10 +54,10 @@ public:
             defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
             m_defaultShader = defaultBuilder.build();
 
-            ShaderBuilder shadowBuilder;
-            shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
-            shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
-            m_shadowShader = shadowBuilder.build();
+            //ShaderBuilder shadowBuilder;
+            //shadowBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shadow_vert.glsl");
+            //shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
+            //m_shadowShader = shadowBuilder.build();
 
 
             //ShaderBuilder defaultBuilder;
@@ -83,6 +83,8 @@ public:
 
     void update()
     {
+
+
         int dummyInteger = 0; // Initialized to 0
         while (!m_window.shouldClose()) {
             // This is your game loop
@@ -95,6 +97,11 @@ public:
             ImGui::Text("Value is: %i", dummyInteger); // Use C printf formatting rules (%i is a signed integer)
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
             ImGui::End();
+
+            m_timer += 0.1f;
+            glm::mat4 Modelmat(1.f);
+            m_modelMatrix = glm::rotate(Modelmat, glm::radians(m_timer), glm::vec3(1.f, 1.f, 0.f));
+
 
             // Clear the screen
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
@@ -114,23 +121,23 @@ public:
                 m_defaultShader.bind();
                 glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 //Uncomment this line when you use the modelMatrix (or fragmentPosition)
-                //glUniformMatrix4fv(m_defaultShader.getUniformLocation("modelMatrix"), 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("modelMatrix"), 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
                 glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
                 if (mesh.hasTextureCoords()) {
                    
                     m_texture.bind(GL_TEXTURE0);
                     glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
-
+                    
                     m_normalMap.bind(GL_TEXTURE1);
                     glUniform1i(m_defaultShader.getUniformLocation("normalMap"), 1);
                     glUniform1i(m_defaultShader.getUniformLocation("hasNormalMap"), GL_TRUE);
-
+                    
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
                 }
                 else {
                     glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                    glUniform1i(m_defaultShader.getUniformLocation("hasNormalMap"), GL_FALSE);
+                    //glUniform1i(m_defaultShader.getUniformLocation("hasNormalMap"), GL_FALSE);
                     glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
                 }
 
@@ -198,6 +205,10 @@ private:
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
     glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
     glm::mat4 m_modelMatrix{ 1.0f };
+
+
+    //TODO: remove scuffed timer
+    float m_timer{ 0.f };
 };
 
 int main()
