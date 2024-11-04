@@ -1,5 +1,6 @@
 //#include "Image.h"
 #include "mesh.h"
+#include "framework/mesh.h"
 #include "texture.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
@@ -226,7 +227,9 @@ class Application {
 public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
-        , m_texture(RESOURCE_ROOT "resources/checkerboard.png")
+        , m_texture(RESOURCE_ROOT "resources/textures/wall.jpeg")
+        , m_normalMap(RESOURCE_ROOT "resources/textures/normalmap.png")
+         
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
@@ -287,6 +290,8 @@ public:
         // Initialize your other resources (e.g., cube mesh)
 
         try {
+
+
             ShaderBuilder defaultBuilder;
             defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/shader_vert.glsl");
             defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/shader_frag.glsl");
@@ -367,7 +372,13 @@ public:
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
             ImGui::End();
 
-            // Clear screen and set depth test
+
+            m_timer += 0.1f;
+            glm::mat4 Modelmat(1.f);
+            m_modelMatrix = glm::rotate(Modelmat, glm::radians(m_timer), glm::vec3(1.f, 1.f, 0.f));
+
+
+            // Clear the screen
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -520,12 +531,14 @@ private:
 
     std::vector<GPUMesh> m_meshes;
     Texture m_texture;
+    Texture m_normalMap;
     bool m_useMaterial{ true };
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
     glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
     glm::mat4 m_modelMatrix{ 1.0f };
+
 
     glm::vec3 cameraPosition;
 
@@ -586,6 +599,8 @@ private:
         m_viewMatrix = glm::lookAt(cameraPosition, cameraPosition + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
+    //TODO: remove scuffed timer
+    float m_timer{ 0.f };
 };
 
 int main()

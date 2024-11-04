@@ -7,6 +7,7 @@ DISABLE_WARNINGS_POP()
 
 #include <iostream>
 
+
 Texture::Texture(std::filesystem::path filePath)
 {
     // Load image from disk to CPU memory.
@@ -44,6 +45,8 @@ Texture::Texture(std::filesystem::path filePath)
     // Generate mip-maps
     glGenerateMipmap(GL_TEXTURE_2D);
 }
+
+
 
 Texture::Texture(Texture&& other)
     : m_texture(other.m_texture)
