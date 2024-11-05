@@ -129,6 +129,100 @@ unsigned int loadTexture(const std::filesystem::path& path) {
     return textureID;
 }
 
+/*Mesh createSkyboxMesh() {
+    Mesh skyboxMesh;
+
+    skyboxMesh.vertices = {
+        // Back face
+        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
+        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
+        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
+        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
+
+        // Front face
+        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
+        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
+        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-right
+        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
+
+        // Left face
+        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
+        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
+        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
+        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
+
+        // Right face
+        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
+        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
+        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
+        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
+
+        // Top face
+        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
+        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
+        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-right
+        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-left
+
+        // Bottom face
+        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
+        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
+        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Top-right
+        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Top-left
+    };
+
+    skyboxMesh.triangles = {
+        // Back face
+        {0, 1, 2}, {0, 2, 3},
+        // Front face
+        {4, 5, 6}, {4, 6, 7},
+        // Left face
+        {8, 9, 10}, {8, 10, 11},
+        // Right face
+        {12, 13, 14}, {12, 14, 15},
+        // Top face
+        {16, 17, 18}, {16, 18, 19},
+        // Bottom face
+        {20, 21, 22}, {20, 22, 23}
+    };
+
+    return skyboxMesh;
+}*/
+
+float skyboxVertices[] = {
+    // Positions          
+    -1.0f,  1.0f, -1.0f,  // 0: Top-left-front
+    -1.0f, -1.0f, -1.0f,  // 1: Bottom-left-front
+     1.0f, -1.0f, -1.0f,  // 2: Bottom-right-front
+     1.0f,  1.0f, -1.0f,  // 3: Top-right-front
+    -1.0f,  1.0f,  1.0f,  // 4: Top-left-back
+    -1.0f, -1.0f,  1.0f,  // 5: Bottom-left-back
+     1.0f, -1.0f,  1.0f,  // 6: Bottom-right-back
+     1.0f,  1.0f,  1.0f   // 7: Top-right-back
+};
+
+unsigned int skyboxIndices[] = {
+    // Front face
+    0, 1, 2,
+    2, 3, 0,
+    // Back face
+    4, 5, 6,
+    6, 7, 4,
+    // Left face
+    4, 5, 1,
+    1, 0, 4,
+    // Right face
+    3, 2, 6,
+    6, 7, 3,
+    // Top face
+    4, 0, 3,
+    3, 7, 4,
+    // Bottom face
+    1, 5, 6,
+    6, 2, 1
+};
+
+
+
 class Application {
 public:
     Application()
@@ -185,6 +279,16 @@ public:
         m_meshes.push_back(cubeMesh1);                  // Add first instance of the cube
         m_meshes.push_back(cubeMesh1);*/
 
+
+
+        std::vector<std::string> faces = {
+            "resources/px.png", "resources/nx.png", "resources/py.png", "resources/ny.png", "resources/pz.png", "resources/nz.png"
+        };
+        unsigned int cubemapTexture = loadCubemap(faces); // Function to load cubemap texture
+
+
+        // Initialize your other resources (e.g., cube mesh)
+
         try {
 
 
@@ -198,11 +302,16 @@ public:
             shadowBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/shadow_frag.glsl");
             m_shadowShader = shadowBuilder.build();
 
-            //ShaderBuilder defaultBuilder;
-            //defaultBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
-            //defaultBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
-            //m_defaultShader = defaultBuilder.build();
+            // Load shaders
+            ShaderBuilder reflectionBuilder;
+            reflectionBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/reflection_vert.glsl");
+            reflectionBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/reflection_frag.glsl");
+            m_reflectionShader = reflectionBuilder.build();
 
+            ShaderBuilder skyboxBuilder;
+            skyboxBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/skybox_vert.glsl");
+            skyboxBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/skybox_frag.glsl");
+            m_skyboxShader = skyboxBuilder.build();
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
@@ -222,13 +331,31 @@ public:
         float parentYPosition = 0.0f;
         float direction = 1.0f;
         int dummyInteger = 0; // Initialized to 0
-        glm::vec3 parentColor (1.0, 1.0, 0.0);
         glm::vec3 childColor(0.0, 0.4, 1.0);
+        glm::vec3 parentColor(1.0, 1.0, 0.0);
+
+        // Set up the skybox VAO, VBO, and EBO
+        unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
+        glGenVertexArrays(1, &skyboxVAO);
+        glGenBuffers(1, &skyboxVBO);
+        glGenBuffers(1, &skyboxEBO);
+
+        glBindVertexArray(skyboxVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), skyboxVertices, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), skyboxIndices, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
         while (!m_window.shouldClose()) {
-            // This is your game loop
-            // Put your real-time logic and rendering in here
+            // Update input and animations
             m_window.updateInput();
+
+            //updateCameraPosition();
 
             angle1 += 0.001f;
             angle2 += 0.0025f;
@@ -238,12 +365,13 @@ public:
                 direction *= -1.0f; // Reverse direction when it reaches a certain height
             }
 
-            // Use ImGui for easy input/output of ints, floats, strings, etc...
+            // ImGui controls
             ImGui::Begin("Window");
-            ImGui::InputInt("This is an integer input", &dummyInteger); // Use ImGui::DragInt or ImGui::DragFloat for larger range of numbers.
-            ImGui::Text("Value is: %i", dummyInteger); // Use C printf formatting rules (%i is a signed integer)
+            ImGui::InputInt("This is an integer input", &dummyInteger);
+            ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
             ImGui::End();
+
 
             m_timer += 0.1f;
             glm::mat4 Modelmat(1.f);
@@ -253,21 +381,20 @@ public:
             // Clear the screen
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            // ...
             glEnable(GL_DEPTH_TEST);
+            //glDisable(GL_BLEND);
 
-            m_defaultShader.bind();
+            m_defaultShader.bind();  // Use default shader for the child cube
 
-            // Parent Cube Transformation (Bigger Cube)
+            // Parent Cube Transformation (environment-mapped reflective cube)
             glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), glm::vec3(-0.3f, parentYPosition, 0.0f));
-            modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f)); // Scale down the parent cube
+            modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
             glm::mat4 mvpMatrixParent = m_projectionMatrix * m_viewMatrix * modelMatrixParent;
             glm::mat3 normalModelMatrixParent = glm::inverseTranspose(glm::mat3(modelMatrixParent));
 
-            // Pass uniforms for the parent cube to the shader
+            // Set uniforms for child cube
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixParent));
             glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixParent));
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
@@ -285,20 +412,19 @@ public:
                 glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
-            // Draw the first cube
             m_meshes[0].draw(m_defaultShader);
 
-            // Child Cube Transformation
-            // Start with the parent transformation and add a relative transformation for the child
-            glm::mat4 modelMatrixChild = modelMatrixParent; // Inherit the parent's transformation
+            //m_defaultShader.bind();
+
+            glm::mat4 modelMatrixChild = modelMatrixParent; // Start with the parent transformation
             modelMatrixChild = glm::translate(modelMatrixChild, glm::vec3(1.5f, 0.0f, 0.0f)); // Offset to the right of the parent
-            modelMatrixChild = glm::scale(modelMatrixChild, glm::vec3(0.2f)); // Scale down the child cube
+            modelMatrixChild = glm::scale(modelMatrixChild, glm::vec3(0.2f));
             modelMatrixChild = glm::rotate(modelMatrixChild, angle2, glm::vec3(0.0f, 1.0f, 0.0f));
 
             glm::mat4 mvpMatrixChild = m_projectionMatrix * m_viewMatrix * modelMatrixChild;
             glm::mat3 normalModelMatrixChild = glm::inverseTranspose(glm::mat3(modelMatrixChild));
 
-            // Pass uniforms for the child cube to the shader
+            // Set uniforms for child cube
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixChild));
             glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixChild));
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(childColor));
@@ -316,13 +442,36 @@ public:
                 glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
-            // Draw the second cube
             m_meshes[1].draw(m_defaultShader);
 
-            // Processes input and swaps the window buffer
+            glDepthFunc(GL_LEQUAL); // Ensure skybox depth is always 1.0
+
+            // Use skybox shader
+            m_skyboxShader.bind();
+
+            // Modify the view matrix to ignore translation (keep rotation only)
+            glm::mat4 viewMatrix = glm::mat4(glm::mat3(m_viewMatrix)); // Remove translation
+            glUniformMatrix4fv(m_skyboxShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
+            glUniformMatrix4fv(m_skyboxShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
+            glUniformMatrix4fv(m_skyboxShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
+
+            // Bind the cubemap texture
+            glBindVertexArray(skyboxVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+
+            // Draw the skybox
+            glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
+
+            // Reset depth function to default
+            glDepthFunc(GL_LESS);
+
+
             m_window.swapBuffers();
         }
     }
+
 
     // In here you can handle key presses
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
@@ -365,13 +514,20 @@ public:
 private:
     Window m_window;
 
+    unsigned int cubemapTexture;
     //GPUMesh m_squareMesh;
     unsigned int m_textureID;
+
+    //GPUMesh m_skyboxMesh;
+    //unsigned int m_cubemapTextureID;
+
 
 
     // Shader for default rendering and for depth rendering
     Shader m_defaultShader;
     Shader m_shadowShader;
+    Shader m_reflectionShader;
+    Shader m_skyboxShader;
 
     std::vector<GPUMesh> m_meshes;
     Texture m_texture;
@@ -383,6 +539,65 @@ private:
     glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
     glm::mat4 m_modelMatrix{ 1.0f };
 
+
+    glm::vec3 cameraPosition;
+
+    unsigned int loadCubemap(const std::vector<std::string>& faces) {
+        unsigned int textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+        int width, height, channels;
+        for (unsigned int i = 0; i < faces.size(); i++) {
+            Image image(faces[i]);
+            if (!image.getPixels().empty()) {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                    image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.getPixels().data());
+            }
+            else {
+                std::cerr << "Failed to load cubemap texture at path: " << faces[i] << std::endl;
+                throw std::runtime_error("Cubemap texture load failed");
+            }
+        }
+
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        return textureID;
+    }
+
+    void updateCameraPosition() {
+        float cameraSpeed = 0.05f;  // Adjust the speed as needed
+
+        glm::vec3 forward(0.0f, 0.0f, -1.0f);  // Forward direction
+        glm::vec3 right(1.0f, 0.0f, 0.0f);     // Right direction
+        glm::vec3 up(0.0f, 1.0f, 0.0f);        // Up direction
+
+        if (m_window.isKeyPressed(GLFW_KEY_W)) {
+            cameraPosition += cameraSpeed * glm::vec3(0.0f, 0.0f, -1.0f);  // Move forward
+        }
+        if (m_window.isKeyPressed(GLFW_KEY_S)) {
+            cameraPosition += cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f);   // Move backward
+        }
+        if (m_window.isKeyPressed(GLFW_KEY_A)) {
+            cameraPosition += cameraSpeed * glm::vec3(-1.0f, 0.0f, 0.0f);  // Move left
+        }
+        if (m_window.isKeyPressed(GLFW_KEY_D)) {
+            cameraPosition += cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f);   // Move right
+        }
+        if (m_window.isKeyPressed(GLFW_KEY_SPACE)) {
+            cameraPosition += cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f);   // Move up
+        }
+        if (m_window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
+            cameraPosition += cameraSpeed * glm::vec3(0.0f, -1.0f, 0.0f);  // Move down
+        }
+
+        // Update view matrix
+        m_viewMatrix = glm::lookAt(cameraPosition, cameraPosition + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    }
 
     //TODO: remove scuffed timer
     float m_timer{ 0.f };

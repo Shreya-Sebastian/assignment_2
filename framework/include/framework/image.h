@@ -15,6 +15,8 @@ struct Image {
 public:
     explicit Image(const std::filesystem::path& filePath);
 
+    const std::vector<unsigned char>& getPixels() const { return pixels; }
+
 
     void writeBitmapToFile(const std::filesystem::path& filePath);
 
