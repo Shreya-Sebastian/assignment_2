@@ -10,7 +10,7 @@ layout(std140) uniform Material // Must match the GPUMaterial defined in src/mes
 
 uniform sampler2D colorMap;
 uniform bool hasTexCoords;
-uniform bool useMaterial;
+// uniform bool useMaterial;
 uniform vec3 color;
 
 in vec3 fragPosition;

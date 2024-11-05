@@ -406,11 +406,11 @@ public:
                 glBindTexture(GL_TEXTURE_2D, m_textureID);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
             else {
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
             m_meshes[0].draw(m_defaultShader);
@@ -436,11 +436,11 @@ public:
                 glBindTexture(GL_TEXTURE_2D, m_textureID);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
             else {
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
             m_meshes[1].draw(m_defaultShader);
@@ -484,29 +484,29 @@ public:
 
         if (key == GLFW_KEY_W) {
             camera.moveForward();
-            m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
         }
 
 
         if (key == GLFW_KEY_S) {
             camera.moveBack();
-            m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
         }// Move backward
         if (key == GLFW_KEY_A) {
             camera.moveLeft();
 
-            m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
         }
         if (key == GLFW_KEY_D) {
             camera.moveRight();
-            m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
         }
 
         if (key == GLFW_KEY_LEFT) {
             camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, false);
         }
         if (key == GLFW_KEY_RIGHT) {
-            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, false); // Rotate right
+            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, false); 
         }
         if (key == GLFW_KEY_UP) {
             camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, true);
@@ -535,7 +535,17 @@ public:
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
     void onMouseMove(const glm::dvec2& cursorPos)
     {
+        
+        if (mousePressed) {
+            printf("Let's rotate!");
+            glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
+
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            m_viewMatrix = camera.viewMatrix();
+        }
         std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
+        m_prevCursorPos = cursorPos;
     }
 
     // If one of the mouse buttons is pressed this function will be called
@@ -543,7 +553,14 @@ public:
     // mods - Any modifier buttons pressed
     void onMouseClicked(int button, int mods)
     {
-        std::cout << "Pressed mouse button: " << button << std::endl;
+
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            std::cout << "Pressed mouse button: " << button << std::endl;
+            
+            mousePressed = true;
+            
+        }
+        
     }
 
     // If one of the mouse buttons is released this function will be called
@@ -552,6 +569,8 @@ public:
     void onMouseReleased(int button, int mods)
     {
         std::cout << "Released mouse button: " << button << std::endl;
+        mousePressed = false;
+        
     }
 
 private:
@@ -576,6 +595,7 @@ private:
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    glm::dvec2 m_prevCursorPos;
 
     glm::vec3 cameraTarget = glm::vec3(0);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
@@ -585,6 +605,7 @@ private:
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
     glm::mat4 m_viewMatrix = camera.viewMatrix();
     glm::mat4 m_modelMatrix{ 1.0f };
+    bool mousePressed = false;
 
 
     glm::vec3 cameraPosition;
