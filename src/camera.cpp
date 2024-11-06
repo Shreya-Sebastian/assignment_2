@@ -29,19 +29,9 @@ glm::mat4 Camera::viewMatrix() const
 
 }
 
-glm::mat4 Camera::rotationMatrix(const glm::mat4& modelMatrix) {
-    glm::vec3 modelPosition = glm::vec3(modelMatrix[3]);
-    glm::vec3 forward = glm::normalize(m_target - modelPosition);
-    glm::vec3 right = glm::normalize(glm::cross(s_yAxis, forward));
-    glm::vec3 adjustedUp = glm::cross(forward, right);
-    glm::mat4 rotationMatrix(1.0f);
-    rotationMatrix[0] = glm::vec4(right, 0.0f);
-    rotationMatrix[1] = glm::vec4(adjustedUp, 0.0f);
-    rotationMatrix[2] = glm::vec4(forward, 0.0f);
-    return rotationMatrix;
-
+glm::vec3 Camera::forward() const {
+    return glm::normalize(m_target - m_position);
 }
-
 
 void Camera::setTopView()
 {

@@ -27,7 +27,7 @@ public:
     //getters
     glm::vec3 cameraPos() const;
     glm::mat4 viewMatrix() const;
-    glm::mat4 rotationMatrix(const glm::mat4& modelMatrix);
+    glm::vec3 forward() const;
 
 private:
     void rotateX(float angle);

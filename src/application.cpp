@@ -254,7 +254,9 @@ public:
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
         m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(0.5f, 0.0f, 0.5f));
-        //m_modelMatrix_wolf = camera.rotationMatrix(m_modelMatrix_wolf) * m_modelMatrix_wolf;
+        //glm::mat4 rotationMatrix = glm::rotate(m_modelMatrix_wolf, 5.0f, glm::vec3(0.0f,1.0f,0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -458,22 +460,21 @@ public:
 
         if (key == GLFW_KEY_W) {
             camera.moveForward();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, camera.forward() * cameraSpeed); //moves object
         }
-
-
         if (key == GLFW_KEY_S) {
             camera.moveBack();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -camera.forward() * cameraSpeed); //moves object
         }// Move backward
         if (key == GLFW_KEY_A) {
             camera.moveLeft();
-
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0,1,0) ));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -right*cameraSpeed); //moves object
         }
         if (key == GLFW_KEY_D) {
             camera.moveRight();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0, 1, 0)));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, right*cameraSpeed); //moves object
         }
 
         if (key == GLFW_KEY_LEFT) {
@@ -667,16 +668,18 @@ private:
     bool m_useMaterial{ true };
     glm::dvec2 m_prevCursorPos;
 
-    glm::vec3 cameraTarget = glm::vec3(0);
-    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
-    Camera camera{ &m_window, cameraPos, cameraTarget };
+
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
-    glm::mat4 m_viewMatrix = camera.viewMatrix();
     glm::mat4 m_modelMatrix{ 1.0f };
     glm::mat4 m_modelMatrix_wolf{ 1.0f };
     glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
+
+    glm::vec3 cameraTarget = glm::vec3(0.0f);
+    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
+    Camera camera{ &m_window, cameraPos, cameraTarget };
+    glm::mat4 m_viewMatrix = camera.viewMatrix();
     bool mousePressed = false;
 
 
