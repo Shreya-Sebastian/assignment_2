@@ -119,6 +119,11 @@ unsigned int skyboxIndices[] = {
     6, 2, 1
 };
 
+struct AABB {
+    float x_min, x_max;
+    float y_min, y_max;
+};
+
 
 
 class Application {
@@ -603,6 +608,11 @@ public:
         glGenerateMipmap(GL_TEXTURE_2D);
 
         return textureID;
+    }
+
+    bool isColliding(const AABB& a, const AABB& b) {
+        return (a.x_min < b.x_max && a.x_max > b.x_min &&
+            a.y_min < b.y_max && a.y_max > b.y_min);
     }
 
 private:
