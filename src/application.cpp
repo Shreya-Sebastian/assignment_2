@@ -255,7 +255,7 @@ public:
         m_meshes.push_back(std::move(gpuSquareMesh));*/
 
         // Load the mars.png texture
-        unsigned int m_textureID = loadTexture("resources/mars.png");
+        unsigned int m_textureID = loadTexture("resources/textures/mars.png");
         if (m_textureID == 0) {
             std::cerr << "Failed to load texture!" << std::endl;
         }
@@ -326,6 +326,11 @@ public:
             skyboxBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/skybox_frag.glsl");
             m_skyboxShader = skyboxBuilder.build();
 
+            ShaderBuilder normalBuilder;
+            normalBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/normal_frag.glsl");
+            m_normalShader = normalBuilder.build();
+
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
@@ -393,7 +398,13 @@ public:
                 m_currentFrame = (m_currentFrame + 1) % m_animationTextures.size();
             }
 
-            glm::vec3 bezierPosition = getConstantSpeedPosition(time);
+            glm::vec3 bezierPosition;
+            if (constantSpeedEnabled) {
+                bezierPosition = getConstantSpeedPosition(time);
+            }
+            else {
+                //bezierPosition = bezierPosition;
+            }
 
             m_window.updateInput();
             angle1 += 0.001f;
@@ -404,12 +415,8 @@ public:
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+            ImGui::Checkbox("Enable Constant Speed", &constantSpeedEnabled);
             ImGui::End();
-
-
-            m_timer += 0.1f;
-            glm::mat4 Modelmat(1.f);
-            m_modelMatrix = glm::rotate(Modelmat, glm::radians(m_timer), glm::vec3(1.f, 1.f, 0.f));
 
 
             // Clear the screen
@@ -437,6 +444,8 @@ public:
             glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), 1);
             glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+            glUniform1i(m_defaultShader.getUniformLocation("constantSpeed"), constantSpeedEnabled);
+
 
             // Bind texture if necessary
             if (m_meshes[0].hasTextureCoords()) {
@@ -646,6 +655,7 @@ private:
     Shader m_shadowShader;
     Shader m_reflectionShader;
     Shader m_skyboxShader;
+    Shader m_normalShader;
 
     std::vector<GPUMesh> m_meshes;
     Texture m_texture;
@@ -673,6 +683,9 @@ private:
 
     std::vector<float> arcLengths;
     std::vector<glm::vec3> bezierPoints;
+
+    bool constantSpeedEnabled{ true };
+
 
     std::vector<unsigned int> m_animationTextures;
 
@@ -738,8 +751,6 @@ private:
         m_viewMatrix = glm::lookAt(cameraPosition, cameraPosition + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
-    //TODO: remove scuffed timer
-    float m_timer{ 0.f };
 };
 
 int main()

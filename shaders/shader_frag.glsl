@@ -16,6 +16,7 @@ uniform vec3 color;
 in vec3 fragPosition;
 in vec3 fragNormal;
 in vec2 fragTexCoord;
+flat in int fragConstantSpeed;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -32,5 +33,20 @@ void main()
     }
     else { 
         fragColor = vec4(objectColor, 1.0);
+    }
+
+    //test
+    switch(fragConstantSpeed){
+        case 0:
+            fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            break;
+        case 1:
+            fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            break;
+        default:
+
+            break;
+    
+    
     }
 }
