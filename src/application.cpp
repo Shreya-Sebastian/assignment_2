@@ -175,6 +175,8 @@ public:
 
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
+        wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
 
@@ -328,7 +330,23 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            //m_defaultShader.bind(); 
+            m_defaultShader.bind(); 
+            glm::vec3 lightPos = glm::vec3(1.0f);
+
+
+            for (GPUMesh& mesh : wolfMeshes) {
+                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix));
+                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
+                mesh.draw(m_defaultShader);
+            }
+
+
 
             // Print out the value of hasTexCoords for debugging
             std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
@@ -340,6 +358,7 @@ public:
 
             // Switch to the reflection shader for the reflective cube
             m_reflectionShader.bind();
+
 
             // Set the MVP matrices
             glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
@@ -371,6 +390,7 @@ public:
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixChild));
             glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixChild));
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(childColor));
+            glUniform1i(m_defaultShader.getUniformLocation("wolf"), false);
 
             // Bind texture if necessary
             if (m_meshes[1].hasTextureCoords()) {
@@ -634,6 +654,7 @@ private:
     Shader m_skyboxShader;
 
     std::vector<GPUMesh> m_meshes;
+    std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
