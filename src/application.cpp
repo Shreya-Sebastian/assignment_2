@@ -25,26 +25,6 @@ DISABLE_WARNINGS_POP()
 #include <vector>
 
 
-/*Mesh createSquareMesh() {
-    Mesh squareMesh;
-
-    // Define vertices with positions, normals, and texture coordinates.
-    squareMesh.vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}}, // Bottom-left
-        {{ 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
-        {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}, // Top-right
-        {{-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}  // Top-left
-    };
-
-    // Define two triangles to form the square.
-    squareMesh.triangles = {
-        {0, 1, 2}, // First triangle
-        {0, 2, 3}  // Second triangle
-    };
-
-    return squareMesh;
-}*/
-
 Mesh createCubeMesh() {
     Mesh cubeMesh;
 
@@ -105,89 +85,6 @@ Mesh createCubeMesh() {
 
     return cubeMesh;
 }
-
-unsigned int loadTexture(const std::filesystem::path& path) {
-    // Load the image
-    Image image(path);
-
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Set texture wrapping and filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // Determine the image format based on channels
-    GLenum format = (image.channels == 4) ? GL_RGBA : GL_RGB;
-
-    // Load image data into the texture
-    glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.get_data());
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    return textureID;
-}
-
-/*Mesh createSkyboxMesh() {
-    Mesh skyboxMesh;
-
-    skyboxMesh.vertices = {
-        // Back face
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
-        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-
-        // Front face
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
-
-        // Left face
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Right face
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Top face
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-right
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Bottom face
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Top-right
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Top-left
-    };
-
-    skyboxMesh.triangles = {
-        // Back face
-        {0, 1, 2}, {0, 2, 3},
-        // Front face
-        {4, 5, 6}, {4, 6, 7},
-        // Left face
-        {8, 9, 10}, {8, 10, 11},
-        // Right face
-        {12, 13, 14}, {12, 14, 15},
-        // Top face
-        {16, 17, 18}, {16, 18, 19},
-        // Bottom face
-        {20, 21, 22}, {20, 22, 23}
-    };
-
-    return skyboxMesh;
-}*/
 
 float skyboxVertices[] = {
     // Positions          
@@ -258,10 +155,10 @@ public:
         // Load the mars.png texture
         unsigned int m_textureID = loadTexture("resources/mars.png");
         if (m_textureID == 0) {
-            std::cerr << "Failed to load texture!" << std::endl;
+            std::cerr << "Failed to load mars texture!" << std::endl;
         }
         else {
-            std::cout << "Texture loaded with ID: " << m_textureID << std::endl;
+            std::cout << "Mars texture loaded with ID: " << m_textureID << std::endl;
         }
 
         // Create a cube mesh and convert it to a GPUMesh
@@ -290,7 +187,14 @@ public:
         // Defining the bezier curves
         arcLengths.resize(NUM_SAMPLES);
         bezierPoints.resize(NUM_SAMPLES);
-        generateArcLengthTable(startPoint, controlPoint1, controlPoint2, endPoint);
+        std::vector<glm::vec3> controlPoints = {
+            startPoint1, controlPoint1, controlPoint2, endPoint1, // First curve
+            startPoint2, controlPoint3, controlPoint4, endPoint2, // Second curve
+            startPoint3, controlPoint5, controlPoint6, endPoint3, // Third curve
+            startPoint4, controlPoint7, controlPoint8, endPoint4  // Fourth curve
+        };
+        generateArcLengthTable(controlPoints);
+
 
         // Load textures for animation
         std::vector<std::string> animationFrames = {
@@ -419,7 +323,7 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            m_defaultShader.bind(); 
+            //m_defaultShader.bind(); 
 
             // Print out the value of hasTexCoords for debugging
             std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
@@ -429,37 +333,26 @@ public:
             modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
-            glm::mat4 mvpMatrixParent = m_projectionMatrix * m_viewMatrix * modelMatrixParent;
-            glm::mat3 normalModelMatrixParent = glm::inverseTranspose(glm::mat3(modelMatrixParent));
+            // Switch to the reflection shader for the reflective cube
+            m_reflectionShader.bind();
 
-            // Set uniforms for parent cube
-            glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixParent));
-            glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixParent));
-            glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), 1);
-            glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
-            glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+            // Set the MVP matrices
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
 
-            // Bind texture if necessary
-            if (m_meshes[0].hasTextureCoords()) {
-                std::cout << "Binding texture for large cube, texture ID: " << m_animationTextures[m_currentFrame] << std::endl;
+            // Set the camera position for accurate reflection direction calculation
+            glUniform3fv(m_reflectionShader.getUniformLocation("cameraPosition"), 1, glm::value_ptr(cameraPos));
 
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, m_animationTextures[0]);
-                glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
-                //glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
+            // Bind the cubemap texture to texture unit 0
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+            glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0); // Set the cubemap sampler uniform
 
-                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
-            }
-            /*else {
-                std::cout << "Texture coordinates not available, using material color" << std::endl;
-                glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
-            }*/
+            // Draw the parent (larger) cube with reflection
+            m_meshes[0].draw(m_reflectionShader);
 
-
-            m_meshes[0].draw(m_defaultShader);
-
-            //m_defaultShader.bind();
+            m_defaultShader.bind();
 
             glm::mat4 modelMatrixChild = modelMatrixParent; // Start with the parent transformation
             modelMatrixChild = glm::translate(modelMatrixChild, glm::vec3(1.5f, 0.0f, 0.0f)); // Offset to the right of the parent
@@ -617,43 +510,62 @@ public:
         
     }
 
-    void generateArcLengthTable(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
-        bezierPoints[0] = p0;
-        arcLengths[0] = 0.0f;
-
+    void generateArcLengthTable(const std::vector<glm::vec3>& controlPoints) {
+        int curveCount = controlPoints.size() / 4; // Each curve has 4 control points
         float totalLength = 0.0f;
-        for (int i = 1; i < NUM_SAMPLES; i++) {
-            float t = static_cast<float>(i) / (NUM_SAMPLES - 1);
-            bezierPoints[i] = evaluateBezier(p0, p1, p2, p3, t);
-            float segmentLength = glm::length(bezierPoints[i] - bezierPoints[i - 1]);
-            totalLength += segmentLength;
-            arcLengths[i] = totalLength;
+
+        // Resize arcLengths and bezierPoints to hold points for all curves
+        arcLengths.resize(curveCount * NUM_SAMPLES);
+        bezierPoints.resize(curveCount * NUM_SAMPLES);
+
+        for (int curveIndex = 0; curveIndex < curveCount; ++curveIndex) {
+            // Get control points for the current curve
+            const glm::vec3& p0 = controlPoints[curveIndex * 4];
+            const glm::vec3& p1 = controlPoints[curveIndex * 4 + 1];
+            const glm::vec3& p2 = controlPoints[curveIndex * 4 + 2];
+            const glm::vec3& p3 = controlPoints[curveIndex * 4 + 3];
+
+            // Generate points and arc lengths for this curve
+            arcLengths[curveIndex * NUM_SAMPLES] = totalLength;
+            bezierPoints[curveIndex * NUM_SAMPLES] = p0;
+            for (int i = 1; i < NUM_SAMPLES; i++) {
+                float t = static_cast<float>(i) / (NUM_SAMPLES - 1);
+                glm::vec3 point = evaluateBezier(p0, p1, p2, p3, t);
+                bezierPoints[curveIndex * NUM_SAMPLES + i] = point;
+
+                // Calculate segment length and update total length
+                float segmentLength = glm::length(point - bezierPoints[curveIndex * NUM_SAMPLES + i - 1]);
+                totalLength += segmentLength;
+                arcLengths[curveIndex * NUM_SAMPLES + i] = totalLength;
+            }
         }
 
-        // Normalize arc length values to [0, 1]
-        for (int i = 1; i < NUM_SAMPLES; i++) {
-            arcLengths[i] /= totalLength;
+        // Normalize arc length values to [0, 1] across all curves
+        for (float& length : arcLengths) {
+            length /= totalLength;
         }
     }
 
+
     glm::vec3 getConstantSpeedPosition(float t) {
+        // Find the segment where this t corresponds in arc length space
         int segment = 0;
-        while (segment < NUM_SAMPLES - 1 && arcLengths[segment] < t) {
+        while (segment < arcLengths.size() - 1 && arcLengths[segment] < t) {
             segment++;
         }
 
-        // Check bounds to avoid out-of-range access
+        // Boundary cases: return start or end position if at extremes
         if (segment == 0) {
             return bezierPoints[0];
         }
-        else if (segment >= NUM_SAMPLES) {
-            return bezierPoints[NUM_SAMPLES - 1];
+        else if (segment >= arcLengths.size()) {
+            return bezierPoints[arcLengths.size() - 1];
         }
 
+        // Calculate local t within the segment
         float segmentT = (t - arcLengths[segment - 1]) / (arcLengths[segment] - arcLengths[segment - 1]);
         return glm::mix(bezierPoints[segment - 1], bezierPoints[segment], segmentT);
     }
-
 
     glm::vec3 evaluateBezier(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t) {
         float u = 1.0f - t;
@@ -731,10 +643,30 @@ private:
     glm::vec3 cameraPosition;
 
     // Points for the bezier curve
-    glm::vec3 startPoint{ -1.0f, 0.0f, 0.0f };
-    glm::vec3 controlPoint1{ -0.5f, 1.0f, 0.0f };
-    glm::vec3 controlPoint2{ 0.5f, -1.0f, 0.0f };
-    glm::vec3 endPoint{ 1.0f, 0.0f, 0.0f };
+    // Side 1: From left to top
+    glm::vec3 startPoint1{ -1.0f, 0.0f, -1.0f };
+    glm::vec3 controlPoint1{ -1.0f, 1.0f, -1.0f };
+    glm::vec3 controlPoint2{ 0.0f, 1.0f, -1.0f };
+    glm::vec3 endPoint1{ 1.0f, 0.0f, -1.0f };
+
+    // Side 2: From top to right
+    glm::vec3 startPoint2{ 1.0f, 0.0f, -1.0f };
+    glm::vec3 controlPoint3{ 1.0f, 1.0f, 0.0f };
+    glm::vec3 controlPoint4{ 1.0f, 1.0f, 1.0f };
+    glm::vec3 endPoint2{ 1.0f, 0.0f, 1.0f };
+
+    // Side 3: From right to bottom
+    glm::vec3 startPoint3{ 1.0f, 0.0f, 1.0f };
+    glm::vec3 controlPoint5{ 1.0f, -1.0f, 1.0f };
+    glm::vec3 controlPoint6{ 0.0f, -1.0f, 1.0f };
+    glm::vec3 endPoint3{ -1.0f, 0.0f, 1.0f };
+
+    // Side 4: From bottom to left
+    glm::vec3 startPoint4{ -1.0f, 0.0f, 1.0f };
+    glm::vec3 controlPoint7{ -1.0f, -1.0f, 0.0f };
+    glm::vec3 controlPoint8{ -1.0f, -1.0f, -1.0f };
+    glm::vec3 endPoint4{ -1.0f, 0.0f, -1.0f };  // Same as the original startPoint to close the loop
+
 
     // For the constant move of the cube through the bezier curve
     float time = 0.0f;
@@ -777,38 +709,6 @@ private:
 
         return textureID;
     }
-
-    void updateCameraPosition() {
-        float cameraSpeed = 0.05f;  // Adjust the speed as needed
-
-        glm::vec3 forward(0.0f, 0.0f, -1.0f);  // Forward direction
-        glm::vec3 right(1.0f, 0.0f, 0.0f);     // Right direction
-        glm::vec3 up(0.0f, 1.0f, 0.0f);        // Up direction
-
-        if (m_window.isKeyPressed(GLFW_KEY_W)) {
-            cameraPosition += cameraSpeed * glm::vec3(0.0f, 0.0f, -1.0f);  // Move forward
-        }
-        if (m_window.isKeyPressed(GLFW_KEY_S)) {
-            cameraPosition += cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f);   // Move backward
-        }
-        if (m_window.isKeyPressed(GLFW_KEY_A)) {
-            cameraPosition += cameraSpeed * glm::vec3(-1.0f, 0.0f, 0.0f);  // Move left
-        }
-        if (m_window.isKeyPressed(GLFW_KEY_D)) {
-            cameraPosition += cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f);   // Move right
-        }
-        if (m_window.isKeyPressed(GLFW_KEY_SPACE)) {
-            cameraPosition += cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f);   // Move up
-        }
-        if (m_window.isKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
-            cameraPosition += cameraSpeed * glm::vec3(0.0f, -1.0f, 0.0f);  // Move down
-        }
-
-        // Update view matrix
-        m_viewMatrix = glm::lookAt(cameraPosition, cameraPosition + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    }
-
-    //TODO: remove scuffed timer
     float m_timer{ 0.f };
 };
 
