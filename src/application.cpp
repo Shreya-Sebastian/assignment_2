@@ -281,12 +281,25 @@ public:
         m_meshes.push_back(cubeMesh1);*/
 
 
-
+        // Defining the faces of the skybox
         std::vector<std::string> faces = {
             "resources/px.png", "resources/nx.png", "resources/py.png", "resources/ny.png", "resources/pz.png", "resources/nz.png"
         };
         unsigned int cubemapTexture = loadCubemap(faces); // Function to load cubemap texture
 
+        // Defining the bezier curves
+        arcLengths.resize(NUM_SAMPLES);
+        bezierPoints.resize(NUM_SAMPLES);
+        generateArcLengthTable(startPoint, controlPoint1, controlPoint2, endPoint);
+
+        // Load textures for animation
+        std::vector<std::string> animationFrames = {
+            "resources/aerial_grass_rock_diff_2k.jpg",
+            "resources/aerial_rocks_02_diff_2k.jpg",
+            "resources/rocky_terrain_diff_2k.jpg",
+            "resources/rocky_terrain_02_diff_2k.jpg"
+        };
+        loadAnimationTextures(animationFrames);
 
         // Initialize your other resources (e.g., cube mesh)
 
@@ -352,19 +365,40 @@ public:
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+
+        float lastFrameTime = static_cast<float>(glfwGetTime());
+        const float positionTolerance = 0.01f;  // Tolerance for reaching the ends
+        //float deltaTime = currentFrameTime - lastFrameTime;
+        //lastFrameTime = currentFrameTime;
+        //time += speed * deltaTime;  // deltaTime is the frame time
+        //if (time > 1.0f) time -= 1.0f;
+
+
         while (!m_window.shouldClose()) {
             // Update input and animations
-            m_window.updateInput();
+            //m_window.updateInput();
 
             //updateCameraPosition();
 
+            // Time logic for the bezier curve moves
+            float currentFrameTime = static_cast<float>(glfwGetTime());
+            float deltaTime = currentFrameTime - lastFrameTime;
+            lastFrameTime = currentFrameTime;
+            time += speed * deltaTime;  // deltaTime is the frame time
+            time = glm::mod(time, 1.0f);  // Keep time within [0, 1]
+
+            // Time logic for the multiple texture loading
+            m_timeAccumulator += deltaTime;
+            if (m_timeAccumulator >= m_animationSpeed) {
+                m_timeAccumulator = 0.0f;
+                m_currentFrame = (m_currentFrame + 1) % m_animationTextures.size();
+            }
+
+            glm::vec3 bezierPosition = getConstantSpeedPosition(time);
+
+            m_window.updateInput();
             angle1 += 0.001f;
             angle2 += 0.0025f;
-
-            parentYPosition += 0.005f * direction;
-            if (parentYPosition > 0.5f || parentYPosition < -0.5f) {
-                direction *= -1.0f; // Reverse direction when it reaches a certain height
-            }
 
             // ImGui controls
             ImGui::Begin("Window");
@@ -385,33 +419,43 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            m_defaultShader.bind();  // Use default shader for the child cube
+            m_defaultShader.bind(); 
+
+            // Print out the value of hasTexCoords for debugging
+            std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
             // Parent Cube Transformation (environment-mapped reflective cube)
-            glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), glm::vec3(-0.3f, parentYPosition, 0.0f));
+            glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), bezierPosition);
             modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
             glm::mat4 mvpMatrixParent = m_projectionMatrix * m_viewMatrix * modelMatrixParent;
             glm::mat3 normalModelMatrixParent = glm::inverseTranspose(glm::mat3(modelMatrixParent));
 
-            // Set uniforms for child cube
+            // Set uniforms for parent cube
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixParent));
             glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixParent));
+            glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), 1);
+            glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
 
             // Bind texture if necessary
             if (m_meshes[0].hasTextureCoords()) {
+                std::cout << "Binding texture for large cube, texture ID: " << m_animationTextures[m_currentFrame] << std::endl;
+
                 glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, m_textureID);
+                glBindTexture(GL_TEXTURE_2D, m_animationTextures[0]);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
-                glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
+                //glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
+
                 //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
-            else {
+            /*else {
+                std::cout << "Texture coordinates not available, using material color" << std::endl;
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
-            }
+                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+            }*/
+
 
             m_meshes[0].draw(m_defaultShader);
 
@@ -573,6 +617,82 @@ public:
         
     }
 
+    void generateArcLengthTable(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
+        bezierPoints[0] = p0;
+        arcLengths[0] = 0.0f;
+
+        float totalLength = 0.0f;
+        for (int i = 1; i < NUM_SAMPLES; i++) {
+            float t = static_cast<float>(i) / (NUM_SAMPLES - 1);
+            bezierPoints[i] = evaluateBezier(p0, p1, p2, p3, t);
+            float segmentLength = glm::length(bezierPoints[i] - bezierPoints[i - 1]);
+            totalLength += segmentLength;
+            arcLengths[i] = totalLength;
+        }
+
+        // Normalize arc length values to [0, 1]
+        for (int i = 1; i < NUM_SAMPLES; i++) {
+            arcLengths[i] /= totalLength;
+        }
+    }
+
+    glm::vec3 getConstantSpeedPosition(float t) {
+        int segment = 0;
+        while (segment < NUM_SAMPLES - 1 && arcLengths[segment] < t) {
+            segment++;
+        }
+
+        // Check bounds to avoid out-of-range access
+        if (segment == 0) {
+            return bezierPoints[0];
+        }
+        else if (segment >= NUM_SAMPLES) {
+            return bezierPoints[NUM_SAMPLES - 1];
+        }
+
+        float segmentT = (t - arcLengths[segment - 1]) / (arcLengths[segment] - arcLengths[segment - 1]);
+        return glm::mix(bezierPoints[segment - 1], bezierPoints[segment], segmentT);
+    }
+
+
+    glm::vec3 evaluateBezier(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t) {
+        float u = 1.0f - t;
+        return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+    }
+
+    // Function to load animation textures
+    void loadAnimationTextures(const std::vector<std::string>& framePaths) {
+        for (const auto& path : framePaths) {
+            unsigned int textureID = loadTexture(path);
+            if (textureID != 0) {
+                m_animationTextures.push_back(textureID);
+                std::cout << "Loaded texture: " << path << " with ID: " << textureID << std::endl;
+            }
+            else {
+                std::cerr << "Failed to load texture: " << path << std::endl;
+            }
+        }
+    }
+
+    // Function to load a texture with ID
+    unsigned int loadTexture(const std::filesystem::path& path) {
+        Image image(path);
+        unsigned int textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        GLenum format = (image.channels == 4) ? GL_RGBA : GL_RGB;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.get_data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        return textureID;
+    }
+
 private:
     Window m_window;
 
@@ -583,7 +703,7 @@ private:
     //GPUMesh m_skyboxMesh;
     //unsigned int m_cubemapTextureID;
 
-
+    const int NUM_SAMPLES = 100;
 
     // Shader for default rendering and for depth rendering
     Shader m_defaultShader;
@@ -609,6 +729,27 @@ private:
 
 
     glm::vec3 cameraPosition;
+
+    // Points for the bezier curve
+    glm::vec3 startPoint{ -1.0f, 0.0f, 0.0f };
+    glm::vec3 controlPoint1{ -0.5f, 1.0f, 0.0f };
+    glm::vec3 controlPoint2{ 0.5f, -1.0f, 0.0f };
+    glm::vec3 endPoint{ 1.0f, 0.0f, 0.0f };
+
+    // For the constant move of the cube through the bezier curve
+    float time = 0.0f;
+    float speed = 0.1f;  // Adjust for desired speed
+    float lastFrameTime = 0.0f;
+
+    std::vector<float> arcLengths;
+    std::vector<glm::vec3> bezierPoints;
+
+    std::vector<unsigned int> m_animationTextures;
+
+    // Animation parameters
+    float m_animationSpeed;    // Time per frame
+    int m_currentFrame;        // Current frame index
+    float m_timeAccumulator;   // Time accumulator for frame switching
 
     unsigned int loadCubemap(const std::vector<std::string>& faces) {
         unsigned int textureID;
