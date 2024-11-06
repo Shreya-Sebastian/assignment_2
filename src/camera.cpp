@@ -26,7 +26,22 @@ glm::mat4 Camera::viewMatrix() const
 {
     if (!m_topView) return glm::lookAt(m_position, m_target, m_up);
     else return glm::lookAt(glm::vec3(0, 5, -1), glm::vec3(0), m_up);
+
 }
+
+glm::mat4 Camera::rotationMatrix(const glm::mat4& modelMatrix) {
+    glm::vec3 modelPosition = glm::vec3(modelMatrix[3]);
+    glm::vec3 forward = glm::normalize(m_target - modelPosition);
+    glm::vec3 right = glm::normalize(glm::cross(s_yAxis, forward));
+    glm::vec3 adjustedUp = glm::cross(forward, right);
+    glm::mat4 rotationMatrix(1.0f);
+    rotationMatrix[0] = glm::vec4(right, 0.0f);
+    rotationMatrix[1] = glm::vec4(adjustedUp, 0.0f);
+    rotationMatrix[2] = glm::vec4(forward, 0.0f);
+    return rotationMatrix;
+
+}
+
 
 void Camera::setTopView()
 {
@@ -51,6 +66,8 @@ void Camera::moveBack() {
     m_position -= forward * cameraSpeed;
     m_target -= forward * cameraSpeed;
 }
+
+
 
 void Camera::moveLeft() {
     glm::vec3 forward = glm::normalize(m_target - m_position);
