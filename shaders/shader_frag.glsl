@@ -20,6 +20,8 @@ in vec2 fragTexCoord;
 uniform vec3 lightPos;
 uniform vec3 cameraPos;
 uniform bool wolf;
+uniform float metallic;
+uniform float roughness;
 
 const float PI = 3.14159265359;
 
@@ -67,8 +69,6 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 
 void main()
 {
-    float roughness = 0.6;
-    float metallic = 0.9;
     vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
 
     vec3 normal = normalize(fragNormal);

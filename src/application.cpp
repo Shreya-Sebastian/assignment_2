@@ -258,6 +258,8 @@ public:
         int dummyInteger = 0; // Initialized to 0
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
+        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(0.5f, 0.0f, 0.5f));
+        //m_modelMatrix_wolf = camera.rotationMatrix(m_modelMatrix_wolf) * m_modelMatrix_wolf;
 
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -333,19 +335,34 @@ public:
             m_defaultShader.bind(); 
             glm::vec3 lightPos = glm::vec3(1.0f);
 
-
+            
             for (GPUMesh& mesh : wolfMeshes) {
-                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix;
+                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf;
                 glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
-                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix));
+                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
                 glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
                 glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
                 glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
                 glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
                 glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
+                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
                 mesh.draw(m_defaultShader);
             }
 
+            for (GPUMesh& mesh : wolfMeshes) {
+                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
+                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(0.1f, 0.5f, 0.7f)));
+                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
+                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.1);
+                mesh.draw(m_defaultShader);
+            }
 
 
             // Print out the value of hasTexCoords for debugging
@@ -446,22 +463,22 @@ public:
 
         if (key == GLFW_KEY_W) {
             camera.moveForward();
-            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
+            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
         }
 
 
         if (key == GLFW_KEY_S) {
             camera.moveBack();
-            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
+            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
         }// Move backward
         if (key == GLFW_KEY_A) {
             camera.moveLeft();
 
-            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
+            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
         }
         if (key == GLFW_KEY_D) {
             camera.moveRight();
-            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
+            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
         }
 
         if (key == GLFW_KEY_LEFT) {
@@ -668,6 +685,8 @@ private:
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
     glm::mat4 m_viewMatrix = camera.viewMatrix();
     glm::mat4 m_modelMatrix{ 1.0f };
+    glm::mat4 m_modelMatrix_wolf{ 1.0f };
+    glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
     bool mousePressed = false;
 
 
