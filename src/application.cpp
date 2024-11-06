@@ -342,6 +342,7 @@ public:
             }
 
 
+
             // Print out the value of hasTexCoords for debugging
             std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
@@ -353,13 +354,11 @@ public:
             // Switch to the reflection shader for the reflective cube
             m_reflectionShader.bind();
 
-            // Set uniforms for parent cube
-            glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixParent));
-            glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixParent));
-            glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), 1);
-            glUniform1i(m_defaultShader.getUniformLocation("wolf"), false);
-            //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
-            glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+
+            // Set the MVP matrices
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
 
             // Set the camera position for accurate reflection direction calculation
             glUniform3fv(m_reflectionShader.getUniformLocation("cameraPosition"), 1, glm::value_ptr(cameraPos));
