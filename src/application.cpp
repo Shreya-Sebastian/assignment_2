@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "framework/mesh.h"
 #include "texture.h"
+#include "camera.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
 #include <framework/disable_all_warnings.h>
@@ -446,6 +447,7 @@ public:
                 glBindTexture(GL_TEXTURE_2D, m_animationTextures[0]);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                 //glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
+
                 //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
             /*else {
@@ -453,6 +455,7 @@ public:
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
                 glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }*/
+
 
             m_meshes[0].draw(m_defaultShader);
 
@@ -477,11 +480,11 @@ public:
                 glBindTexture(GL_TEXTURE_2D, m_textureID);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
             else {
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
             m_meshes[1].draw(m_defaultShader);
@@ -521,7 +524,49 @@ public:
     void onKeyPressed(int key, int mods)
     {
         std::cout << "Key pressed: " << key << std::endl;
+        float cameraSpeed = 0.1f;
+
+        if (key == GLFW_KEY_W) {
+            camera.moveForward();
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
+        }
+
+
+        if (key == GLFW_KEY_S) {
+            camera.moveBack();
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
+        }// Move backward
+        if (key == GLFW_KEY_A) {
+            camera.moveLeft();
+
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
+        }
+        if (key == GLFW_KEY_D) {
+            camera.moveRight();
+            //m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
+        }
+
+        if (key == GLFW_KEY_LEFT) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, false);
+        }
+        if (key == GLFW_KEY_RIGHT) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, false); 
+        }
+        if (key == GLFW_KEY_UP) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, true);
+        }
+        if (key == GLFW_KEY_DOWN) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, true);
+
+        }
+
+        if (key == GLFW_KEY_L) { //top view
+            camera.setTopView();
+        }
+
+        m_viewMatrix = camera.viewMatrix();
     }
+
 
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
@@ -534,7 +579,17 @@ public:
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
     void onMouseMove(const glm::dvec2& cursorPos)
     {
+        
+        if (mousePressed) {
+            printf("Let's rotate!");
+            glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
+
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            m_viewMatrix = camera.viewMatrix();
+        }
         std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
+        m_prevCursorPos = cursorPos;
     }
 
     // If one of the mouse buttons is pressed this function will be called
@@ -542,7 +597,14 @@ public:
     // mods - Any modifier buttons pressed
     void onMouseClicked(int button, int mods)
     {
-        std::cout << "Pressed mouse button: " << button << std::endl;
+
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            std::cout << "Pressed mouse button: " << button << std::endl;
+            
+            mousePressed = true;
+            
+        }
+        
     }
 
     // If one of the mouse buttons is released this function will be called
@@ -551,6 +613,8 @@ public:
     void onMouseReleased(int button, int mods)
     {
         std::cout << "Released mouse button: " << button << std::endl;
+        mousePressed = false;
+        
     }
 
     void generateArcLengthTable(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
@@ -651,11 +715,17 @@ private:
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    glm::dvec2 m_prevCursorPos;
+
+    glm::vec3 cameraTarget = glm::vec3(0);
+    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
+    Camera camera{ &m_window, cameraPos, cameraTarget };
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
-    glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
+    glm::mat4 m_viewMatrix = camera.viewMatrix();
     glm::mat4 m_modelMatrix{ 1.0f };
+    bool mousePressed = false;
 
 
     glm::vec3 cameraPosition;
