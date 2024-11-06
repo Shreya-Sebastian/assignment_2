@@ -24,13 +24,12 @@ void main()
     vec3 normal = normalize(fragNormal);
     vec3 objectColor = color;
 
-    if (hasTexCoords) { 
-        fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);
-        
+    if (useMaterial) { 
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
     }
-    //else if (useMaterial) { 
-        //fragColor = vec4(kd, 1);
-    //}
+    else if (hasTexCoords) { 
+        fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);   
+    }
     else { 
         fragColor = vec4(objectColor, 1.0);
     }
