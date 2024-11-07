@@ -1,42 +1,35 @@
 #version 410
-//normal vert
-uniform mat4 mvpMatrix;
-uniform mat4 modelMatrix;
-// Normals should be transformed differently than positions:
-// https://paroj.github.io/gltut/Illumination/Tut09%20Normal%20Transformation.html
-uniform mat3 normalModelMatrix;
 
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec3 normal;
-layout(location = 2) in vec2 texCoord;
+uniform mat4 mvpMatrix;         // Model-View-Projection matrix
+uniform mat4 modelMatrix;       // Model matrix for transforming positions
+uniform mat3 normalModelMatrix; // Normal matrix for transforming normals
 
-out vec3 fragPosition;
-out vec3 fragNormal;
-out vec2 fragTexCoord;
-out vec3 fragTangent;
-out vec3 fragBitangent;
+layout(location = 0) in vec3 position;      // Vertex position
+layout(location = 1) in vec3 normal;        // Vertex normal
+layout(location = 2) in vec2 texCoord;      // Texture coordinates
+layout(location = 3) in vec3 tangent;       // Tangent vector
+layout(location = 4) in vec3 bitangent;     // Bitangent vector
+
+out vec3 fragPosition;   // Transformed position in world space
+out vec3 fragNormal;     // Transformed normal in world space
+out vec2 fragTexCoord;   // Texture coordinates
+out mat3 TBN;            // TBN matrix for transforming normals from tangent space
 
 void main()
 {
+    // Transform vertex position
     gl_Position = mvpMatrix * vec4(position, 1);
-    
-    fragPosition    = (modelMatrix * vec4(position, 1)).xyz;
-    fragNormal      = normalModelMatrix * normal;
-    fragTexCoord    = texCoord;
 
-    // Calculate tangent and bitangent vectors
-    // Assuming access to adjacent vertices and texture coordinates
+    // Calculate world-space position and normal
+    fragPosition = (modelMatrix * vec4(position, 1)).xyz;
+    fragNormal = normalize(normalModelMatrix * normal);
+    fragTexCoord = texCoord;
 
-    vec3 deltaPos1 = vec3(1.0, 0.0, 0.0); // placeholder for adjacent vertex position difference
-    vec3 deltaPos2 = vec3(0.0, 1.0, 0.0); // placeholder for adjacent vertex position difference
+    // Transform tangent and bitangent to world space
+    vec3 T = normalize(normalModelMatrix * tangent);
+    vec3 B = normalize(normalModelMatrix * bitangent);
+    vec3 N = fragNormal;
 
-    vec2 deltaUV1 = vec2(1.0, 0.0); // placeholder for adjacent texture coordinate difference
-    vec2 deltaUV2 = vec2(0.0, 1.0); // placeholder for adjacent texture coordinate difference
-
-    float r = 1.0 / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-    vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y) * r;
-    vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x) * r;
-
-    fragTangent = normalize(normalModelMatrix * tangent);
-    fragBitangent = normalize(normalModelMatrix * bitangent);
+    // Construct the TBN matrix
+    TBN = mat3(T, B, N);
 }

@@ -1,7 +1,5 @@
 #version 410
 
-
-
 uniform sampler2D colorMap;
 uniform sampler2D normalMap;
 
@@ -78,21 +76,20 @@ void main()
 
     vec3 Nnormal = texture(normalMap, fragTexCoord).rgb;
     Nnormal = Nnormal * 2.0 - 1.0;
-    Nnormal = normalize(-1* Nnormal);
-
-    float NNdotL = 1.f;
-    
-    if (normalMapping){
-        NNdotL = dot(Nnormal, light_dir);
-    }
+    Nnormal = normalize(Nnormal);
 
     vec3 normal = normalize(fragNormal);
+
+    if (normalMapping){
+        normal = Nnormal;
+    }
+
     vec3 V = normalize(cameraPos - fragPosition);
     vec3 L = normalize(lightPos);
     vec3 objectColor = color;
 
     if (hasTexCoords) { 
-        fragColor = NNdotL * texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);   
+        fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);   
     }
     else if (wolf) { 
         
@@ -116,7 +113,12 @@ void main()
 vec3 kD = vec3(1.0) - kS;
   
 kD *= 1.0 - metallic;	
-    float NdotL = max(dot(normal, lightDir), 0.0);        
+    
+    
+
+    float NdotL = max(dot(normal, lightDir), 0.0);    
+    
+
     Lo += (kD * objectColor / PI + specular) * radiance * NdotL;
 
     vec3 ambient = vec3(0.005) * objectColor;
@@ -125,7 +127,7 @@ kD *= 1.0 - metallic;
     Lo = pow(Lo, vec3(1.0/2.2)); 
 
 
-        fragColor = NNdotL * vec4(Lo, 1.0);
+        fragColor = vec4(Lo, 1.0);
         } 
         
         else {
@@ -145,10 +147,8 @@ kD *= 1.0 - metallic;
             accumulatedColor += specular * lightColor;
         }
 
-        fragColor = NNdotL * vec4(accumulatedColor, 1.0);
+        fragColor = vec4(accumulatedColor, 1.0);
         }
-        
-        
         
 
 }

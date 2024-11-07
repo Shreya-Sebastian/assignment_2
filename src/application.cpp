@@ -23,6 +23,7 @@ DISABLE_WARNINGS_POP()
 #include <functional>
 #include <iostream>
 #include <vector>
+#include "tiny_obj_loader.h"
 
 
 Mesh createCubeMesh() {
@@ -121,6 +122,52 @@ unsigned int skyboxIndices[] = {
 
 
 
+std::vector<glm::vec3> wolfVertices;
+std::vector<glm::vec3> wolfNormals;
+std::vector<glm::vec2> wolfTexCoords;
+
+void loadObj(const std::string& filepath) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
+        throw std::runtime_error(warn + err);
+    }
+
+    // Loop over shapes
+    for (const auto& shape : shapes) {
+        // Loop over faces (each face has 3 vertices)
+        for (const auto& index : shape.mesh.indices) {
+            glm::vec3 vertex(
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            );
+            wolfVertices.push_back(vertex);
+
+            if (index.normal_index >= 0) {
+                glm::vec3 normal(
+                    attrib.normals[3 * index.normal_index + 0],
+                    attrib.normals[3 * index.normal_index + 1],
+                    attrib.normals[3 * index.normal_index + 2]
+                );
+                wolfNormals.push_back(normal);
+            }
+
+            if (index.texcoord_index >= 0) {
+                glm::vec2 texCoord(
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    attrib.texcoords[2 * index.texcoord_index + 1]
+                );
+                wolfTexCoords.push_back(texCoord);
+            }
+        }
+    }
+}
+
+
 class Application {
 public:
     Application()
@@ -169,7 +216,8 @@ public:
 
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
-        wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+        wolfMeshes.emplace_back(createCubeMesh());
+            //GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
         //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
@@ -282,6 +330,100 @@ public:
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+
+        loadObj("resources/wolf/Wolf_obj.obj");
+
+
+
+
+        GLuint wolfVBO, wolfVAO, wolfNBO, wolfTBO;
+        glGenVertexArrays(1, &wolfVAO);
+        glGenBuffers(1, &wolfVBO);
+        glGenBuffers(1, &wolfNBO);
+        glGenBuffers(1, &wolfTBO);
+
+        // Bind VAO
+        glBindVertexArray(wolfVAO);
+
+        // Vertex positions
+        glBindBuffer(GL_ARRAY_BUFFER, wolfVBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfVertices.size() * sizeof(glm::vec3), wolfVertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(0);
+
+        // Normals
+        glBindBuffer(GL_ARRAY_BUFFER, wolfNBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfNormals.size() * sizeof(glm::vec3), wolfNormals.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(1);
+
+        // Texture coordinates
+        glBindBuffer(GL_ARRAY_BUFFER, wolfTBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfTexCoords.size() * sizeof(glm::vec2), wolfTexCoords.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(2);
+
+        // Unbind VAO
+        glBindVertexArray(0);
+
+        std::vector<glm::vec3> wolfTangents(wolfVertices.size());
+        std::vector<glm::vec3> wolfBitangents(wolfVertices.size());
+
+        for (size_t i = 0; i < wolfVertices.size(); i += 3) {
+            glm::vec3 pos1 = wolfVertices[i];
+            glm::vec3 pos2 = wolfVertices[i + 1];
+            glm::vec3 pos3 = wolfVertices[i + 2];
+
+            glm::vec2 uv1 = wolfTexCoords[i];
+            glm::vec2 uv2 = wolfTexCoords[i + 1];
+            glm::vec2 uv3 = wolfTexCoords[i + 2];
+
+            glm::vec3 edge1 = pos2 - pos1;
+            glm::vec3 edge2 = pos3 - pos1;
+            glm::vec2 deltaUV1 = uv2 - uv1;
+            glm::vec2 deltaUV2 = uv3 - uv1;
+
+            float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+            glm::vec3 tangent;
+            tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+            tangent = glm::normalize(tangent);
+
+            glm::vec3 bitangent;
+            bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+            bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+            bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+            bitangent = glm::normalize(bitangent);
+
+            wolfTangents[i] = tangent;
+            wolfTangents[i + 1] = tangent;
+            wolfTangents[i + 2] = tangent;
+
+            wolfBitangents[i] = bitangent;
+            wolfBitangents[i + 1] = bitangent;
+            wolfBitangents[i + 2] = bitangent;
+        }
+
+
+        GLuint wolfTanBO, wolfBitanBO;
+        glGenBuffers(1, &wolfTanBO);
+        glGenBuffers(1, &wolfBitanBO);
+
+        // Tangents
+        glBindBuffer(GL_ARRAY_BUFFER, wolfTanBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfTangents.size() * sizeof(glm::vec3), wolfTangents.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(3);
+
+        // Bitangents
+        glBindBuffer(GL_ARRAY_BUFFER, wolfBitanBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfBitangents.size() * sizeof(glm::vec3), wolfBitangents.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(4);
+
+        glBindVertexArray(0);
 
         float lastFrameTime = static_cast<float>(glfwGetTime());
         const float positionTolerance = 0.01f;  // Tolerance for reaching the ends
