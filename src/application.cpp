@@ -322,6 +322,7 @@ public:
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+            ImGui::Checkbox("Normal Mapping", &m_normalMapping);
             const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
 
             if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
@@ -379,18 +380,20 @@ public:
 
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
-                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
-                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(0.1f, 0.5f, 0.7f)));
-                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
-                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
-                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.1);
-                mesh.draw(m_defaultShader);
+                glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), 0.3);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), 0.1);
+                m_normalMap.bind(GL_TEXTURE1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
+                mesh.draw(m_normalShader);
             }
-
 
             // Print out the value of hasTexCoords for debugging
             // std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
