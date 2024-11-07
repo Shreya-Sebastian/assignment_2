@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "framework/mesh.h"
 #include "texture.h"
+#include "camera.h"
 // Always include window first (because it includes glfw, which includes GL which needs to be included AFTER glew).
 // Can't wait for modules to fix this stuff...
 #include <framework/disable_all_warnings.h>
@@ -23,26 +24,6 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <vector>
 
-
-/*Mesh createSquareMesh() {
-    Mesh squareMesh;
-
-    // Define vertices with positions, normals, and texture coordinates.
-    squareMesh.vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}}, // Bottom-left
-        {{ 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}}, // Bottom-right
-        {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}}, // Top-right
-        {{-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}}  // Top-left
-    };
-
-    // Define two triangles to form the square.
-    squareMesh.triangles = {
-        {0, 1, 2}, // First triangle
-        {0, 2, 3}  // Second triangle
-    };
-
-    return squareMesh;
-}*/
 
 Mesh createCubeMesh() {
     Mesh cubeMesh;
@@ -104,89 +85,6 @@ Mesh createCubeMesh() {
 
     return cubeMesh;
 }
-
-unsigned int loadTexture(const std::filesystem::path& path) {
-    // Load the image
-    Image image(path);
-
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Set texture wrapping and filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // Determine the image format based on channels
-    GLenum format = (image.channels == 4) ? GL_RGBA : GL_RGB;
-
-    // Load image data into the texture
-    glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.get_data());
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    return textureID;
-}
-
-/*Mesh createSkyboxMesh() {
-    Mesh skyboxMesh;
-
-    skyboxMesh.vertices = {
-        // Back face
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
-        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-
-        // Front face
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
-
-        // Left face
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Right face
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Top-left
-        {{ 1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Top face
-        {{-1.0f,  1.0f, -1.0f}, {}, {}}, // Top-left
-        {{ 1.0f,  1.0f, -1.0f}, {}, {}}, // Top-right
-        {{ 1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-right
-        {{-1.0f,  1.0f,  1.0f}, {}, {}}, // Bottom-left
-
-        // Bottom face
-        {{-1.0f, -1.0f, -1.0f}, {}, {}}, // Bottom-left
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Bottom-right
-        {{ 1.0f, -1.0f,  1.0f}, {}, {}}, // Top-right
-        {{-1.0f, -1.0f,  1.0f}, {}, {}}, // Top-left
-    };
-
-    skyboxMesh.triangles = {
-        // Back face
-        {0, 1, 2}, {0, 2, 3},
-        // Front face
-        {4, 5, 6}, {4, 6, 7},
-        // Left face
-        {8, 9, 10}, {8, 10, 11},
-        // Right face
-        {12, 13, 14}, {12, 14, 15},
-        // Top face
-        {16, 17, 18}, {16, 18, 19},
-        // Bottom face
-        {20, 21, 22}, {20, 22, 23}
-    };
-
-    return skyboxMesh;
-}*/
 
 float skyboxVertices[] = {
     // Positions          
@@ -257,10 +155,10 @@ public:
         // Load the mars.png texture
         unsigned int m_textureID = loadTexture("resources/textures/mars.png");
         if (m_textureID == 0) {
-            std::cerr << "Failed to load texture!" << std::endl;
+            std::cerr << "Failed to load mars texture!" << std::endl;
         }
         else {
-            std::cout << "Texture loaded with ID: " << m_textureID << std::endl;
+            std::cout << "Mars texture loaded with ID: " << m_textureID << std::endl;
         }
 
         // Create a cube mesh and convert it to a GPUMesh
@@ -272,6 +170,8 @@ public:
 
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
+        wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
 
@@ -289,7 +189,14 @@ public:
         // Defining the bezier curves
         arcLengths.resize(NUM_SAMPLES);
         bezierPoints.resize(NUM_SAMPLES);
-        generateArcLengthTable(startPoint, controlPoint1, controlPoint2, endPoint);
+        std::vector<glm::vec3> controlPoints = {
+            startPoint1, controlPoint1, controlPoint2, endPoint1, // First curve
+            startPoint2, controlPoint3, controlPoint4, endPoint2, // Second curve
+            startPoint3, controlPoint5, controlPoint6, endPoint3, // Third curve
+            startPoint4, controlPoint7, controlPoint8, endPoint4  // Fourth curve
+        };
+        generateArcLengthTable(controlPoints);
+
 
         // Load textures for animation
         std::vector<std::string> animationFrames = {
@@ -351,6 +258,10 @@ public:
         int dummyInteger = 0; // Initialized to 0
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
+        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(0.5f, 0.0f, 0.5f));
+        //glm::mat4 rotationMatrix = glm::rotate(m_modelMatrix_wolf, 5.0f, glm::vec3(0.0f,1.0f,0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -426,6 +337,37 @@ public:
             //glDisable(GL_BLEND);
 
             m_defaultShader.bind(); 
+            glm::vec3 lightPos = glm::vec3(1.0f);
+
+            
+            for (GPUMesh& mesh : wolfMeshes) {
+                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf;
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
+                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
+                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
+                mesh.draw(m_defaultShader);
+            }
+
+            for (GPUMesh& mesh : wolfMeshes) {
+                const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
+                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(0.1f, 0.5f, 0.7f)));
+                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
+                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.1);
+                mesh.draw(m_defaultShader);
+            }
+
 
             // Print out the value of hasTexCoords for debugging
             std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
@@ -435,8 +377,8 @@ public:
             modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
-            glm::mat4 mvpMatrixParent = m_projectionMatrix * m_viewMatrix * modelMatrixParent;
-            glm::mat3 normalModelMatrixParent = glm::inverseTranspose(glm::mat3(modelMatrixParent));
+            // Switch to the reflection shader for the reflective cube
+            m_reflectionShader.bind();
 
             // Set uniforms for parent cube
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixParent));
@@ -444,28 +386,24 @@ public:
             glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), 1);
             glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
-            glUniform1i(m_defaultShader.getUniformLocation("constantSpeed"), constantSpeedEnabled);
 
+            // Set the MVP matrices
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
+            glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
 
-            // Bind texture if necessary
-            if (m_meshes[0].hasTextureCoords()) {
-                std::cout << "Binding texture for large cube, texture ID: " << m_animationTextures[m_currentFrame] << std::endl;
+            // Set the camera position for accurate reflection direction calculation
+            glUniform3fv(m_reflectionShader.getUniformLocation("cameraPosition"), 1, glm::value_ptr(cameraPos));
 
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, m_animationTextures[0]);
-                glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
-                //glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
-                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
-            }
-            /*else {
-                std::cout << "Texture coordinates not available, using material color" << std::endl;
-                glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
-            }*/
+            // Bind the cubemap texture to texture unit 0
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+            glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0); // Set the cubemap sampler uniform
 
-            m_meshes[0].draw(m_defaultShader);
+            // Draw the parent (larger) cube with reflection
+            m_meshes[0].draw(m_reflectionShader);
 
-            //m_defaultShader.bind();
+            m_defaultShader.bind();
 
             glm::mat4 modelMatrixChild = modelMatrixParent; // Start with the parent transformation
             modelMatrixChild = glm::translate(modelMatrixChild, glm::vec3(1.5f, 0.0f, 0.0f)); // Offset to the right of the parent
@@ -479,6 +417,7 @@ public:
             glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrixChild));
             glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrixChild));
             glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(childColor));
+            glUniform1i(m_defaultShader.getUniformLocation("wolf"), false);
 
             // Bind texture if necessary
             if (m_meshes[1].hasTextureCoords()) {
@@ -486,11 +425,11 @@ public:
                 glBindTexture(GL_TEXTURE_2D, m_textureID);
                 glUniform1i(m_defaultShader.getUniformLocation("colorMap"), 0);
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_TRUE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), GL_FALSE);
             }
             else {
                 glUniform1i(m_defaultShader.getUniformLocation("hasTexCoords"), GL_FALSE);
-                glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
+                //glUniform1i(m_defaultShader.getUniformLocation("useMaterial"), m_useMaterial);
             }
 
             m_meshes[1].draw(m_defaultShader);
@@ -530,7 +469,48 @@ public:
     void onKeyPressed(int key, int mods)
     {
         std::cout << "Key pressed: " << key << std::endl;
+        float cameraSpeed = 0.1f;
+
+        if (key == GLFW_KEY_W) {
+            camera.moveForward();
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, camera.forward() * cameraSpeed); //moves object
+        }
+        if (key == GLFW_KEY_S) {
+            camera.moveBack();
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -camera.forward() * cameraSpeed); //moves object
+        }// Move backward
+        if (key == GLFW_KEY_A) {
+            camera.moveLeft();
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0,1,0) ));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -right*cameraSpeed); //moves object
+        }
+        if (key == GLFW_KEY_D) {
+            camera.moveRight();
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0, 1, 0)));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, right*cameraSpeed); //moves object
+        }
+
+        if (key == GLFW_KEY_LEFT) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, false);
+        }
+        if (key == GLFW_KEY_RIGHT) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, false); 
+        }
+        if (key == GLFW_KEY_UP) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), 10.0f, true);
+        }
+        if (key == GLFW_KEY_DOWN) {
+            camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, true);
+
+        }
+
+        if (key == GLFW_KEY_L) { //top view
+            camera.setTopView();
+        }
+
+        m_viewMatrix = camera.viewMatrix();
     }
+
 
     // In here you can handle key releases
     // key - Integer that corresponds to numbers in https://www.glfw.org/docs/latest/group__keys.html
@@ -543,7 +523,17 @@ public:
     // If the mouse is moved this function will be called with the x, y screen-coordinates of the mouse
     void onMouseMove(const glm::dvec2& cursorPos)
     {
+        
+        if (mousePressed) {
+            printf("Let's rotate!");
+            glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
+
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            m_viewMatrix = camera.viewMatrix();
+        }
         std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
+        m_prevCursorPos = cursorPos;
     }
 
     // If one of the mouse buttons is pressed this function will be called
@@ -551,7 +541,14 @@ public:
     // mods - Any modifier buttons pressed
     void onMouseClicked(int button, int mods)
     {
-        std::cout << "Pressed mouse button: " << button << std::endl;
+
+        if (button == GLFW_MOUSE_BUTTON_LEFT) {
+            std::cout << "Pressed mouse button: " << button << std::endl;
+            
+            mousePressed = true;
+            
+        }
+        
     }
 
     // If one of the mouse buttons is released this function will be called
@@ -560,45 +557,66 @@ public:
     void onMouseReleased(int button, int mods)
     {
         std::cout << "Released mouse button: " << button << std::endl;
+        mousePressed = false;
+        
     }
 
-    void generateArcLengthTable(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
-        bezierPoints[0] = p0;
-        arcLengths[0] = 0.0f;
-
+    void generateArcLengthTable(const std::vector<glm::vec3>& controlPoints) {
+        int curveCount = controlPoints.size() / 4; // Each curve has 4 control points
         float totalLength = 0.0f;
-        for (int i = 1; i < NUM_SAMPLES; i++) {
-            float t = static_cast<float>(i) / (NUM_SAMPLES - 1);
-            bezierPoints[i] = evaluateBezier(p0, p1, p2, p3, t);
-            float segmentLength = glm::length(bezierPoints[i] - bezierPoints[i - 1]);
-            totalLength += segmentLength;
-            arcLengths[i] = totalLength;
+
+        // Resize arcLengths and bezierPoints to hold points for all curves
+        arcLengths.resize(curveCount * NUM_SAMPLES);
+        bezierPoints.resize(curveCount * NUM_SAMPLES);
+
+        for (int curveIndex = 0; curveIndex < curveCount; ++curveIndex) {
+            // Get control points for the current curve
+            const glm::vec3& p0 = controlPoints[curveIndex * 4];
+            const glm::vec3& p1 = controlPoints[curveIndex * 4 + 1];
+            const glm::vec3& p2 = controlPoints[curveIndex * 4 + 2];
+            const glm::vec3& p3 = controlPoints[curveIndex * 4 + 3];
+
+            // Generate points and arc lengths for this curve
+            arcLengths[curveIndex * NUM_SAMPLES] = totalLength;
+            bezierPoints[curveIndex * NUM_SAMPLES] = p0;
+            for (int i = 1; i < NUM_SAMPLES; i++) {
+                float t = static_cast<float>(i) / (NUM_SAMPLES - 1);
+                glm::vec3 point = evaluateBezier(p0, p1, p2, p3, t);
+                bezierPoints[curveIndex * NUM_SAMPLES + i] = point;
+
+                // Calculate segment length and update total length
+                float segmentLength = glm::length(point - bezierPoints[curveIndex * NUM_SAMPLES + i - 1]);
+                totalLength += segmentLength;
+                arcLengths[curveIndex * NUM_SAMPLES + i] = totalLength;
+            }
         }
 
-        // Normalize arc length values to [0, 1]
-        for (int i = 1; i < NUM_SAMPLES; i++) {
-            arcLengths[i] /= totalLength;
+        // Normalize arc length values to [0, 1] across all curves
+        for (float& length : arcLengths) {
+            length /= totalLength;
         }
     }
+
 
     glm::vec3 getConstantSpeedPosition(float t) {
+        // Find the segment where this t corresponds in arc length space
         int segment = 0;
-        while (segment < NUM_SAMPLES - 1 && arcLengths[segment] < t) {
+        while (segment < arcLengths.size() - 1 && arcLengths[segment] < t) {
             segment++;
         }
 
-        // Check bounds to avoid out-of-range access
+        // Boundary cases: return start or end position if at extremes
         if (segment == 0) {
             return bezierPoints[0];
         }
-        else if (segment >= NUM_SAMPLES) {
-            return bezierPoints[NUM_SAMPLES - 1];
+        else if (segment >= arcLengths.size()) {
+            return bezierPoints[arcLengths.size() - 1];
         }
 
+        // Calculate local t within the segment
         float segmentT = (t - arcLengths[segment - 1]) / (arcLengths[segment] - arcLengths[segment - 1]);
         return glm::mix(bezierPoints[segment - 1], bezierPoints[segment], segmentT);
     }
-
 
     glm::vec3 evaluateBezier(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t) {
         float u = 1.0f - t;
@@ -658,23 +676,54 @@ private:
     Shader m_normalShader;
 
     std::vector<GPUMesh> m_meshes;
+    std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    glm::dvec2 m_prevCursorPos;
+
+
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
-    glm::mat4 m_viewMatrix = glm::lookAt(glm::vec3(-1, 1, -1), glm::vec3(0), glm::vec3(0, 1, 0));
     glm::mat4 m_modelMatrix{ 1.0f };
+    glm::mat4 m_modelMatrix_wolf{ 1.0f };
+    glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
+
+    glm::vec3 cameraTarget = glm::vec3(0.0f);
+    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
+    Camera camera{ &m_window, cameraPos, cameraTarget };
+    glm::mat4 m_viewMatrix = camera.viewMatrix();
+    bool mousePressed = false;
 
 
     glm::vec3 cameraPosition;
 
     // Points for the bezier curve
-    glm::vec3 startPoint{ -1.0f, 0.0f, 0.0f };
-    glm::vec3 controlPoint1{ -0.5f, 1.0f, 0.0f };
-    glm::vec3 controlPoint2{ 0.5f, -1.0f, 0.0f };
-    glm::vec3 endPoint{ 1.0f, 0.0f, 0.0f };
+    // Side 1: From left to top
+    glm::vec3 startPoint1{ -1.0f, 0.0f, -1.0f };
+    glm::vec3 controlPoint1{ -1.0f, 1.0f, -1.0f };
+    glm::vec3 controlPoint2{ 0.0f, 1.0f, -1.0f };
+    glm::vec3 endPoint1{ 1.0f, 0.0f, -1.0f };
+
+    // Side 2: From top to right
+    glm::vec3 startPoint2{ 1.0f, 0.0f, -1.0f };
+    glm::vec3 controlPoint3{ 1.0f, 1.0f, 0.0f };
+    glm::vec3 controlPoint4{ 1.0f, 1.0f, 1.0f };
+    glm::vec3 endPoint2{ 1.0f, 0.0f, 1.0f };
+
+    // Side 3: From right to bottom
+    glm::vec3 startPoint3{ 1.0f, 0.0f, 1.0f };
+    glm::vec3 controlPoint5{ 1.0f, -1.0f, 1.0f };
+    glm::vec3 controlPoint6{ 0.0f, -1.0f, 1.0f };
+    glm::vec3 endPoint3{ -1.0f, 0.0f, 1.0f };
+
+    // Side 4: From bottom to left
+    glm::vec3 startPoint4{ -1.0f, 0.0f, 1.0f };
+    glm::vec3 controlPoint7{ -1.0f, -1.0f, 0.0f };
+    glm::vec3 controlPoint8{ -1.0f, -1.0f, -1.0f };
+    glm::vec3 endPoint4{ -1.0f, 0.0f, -1.0f };  // Same as the original startPoint to close the loop
+
 
     // For the constant move of the cube through the bezier curve
     float time = 0.0f;
@@ -751,6 +800,8 @@ private:
         m_viewMatrix = glm::lookAt(cameraPosition, cameraPosition + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     }
 
+    //TODO: remove scuffed timer
+    float m_timer{ 0.f };
 };
 
 int main()
