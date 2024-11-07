@@ -489,22 +489,49 @@ public:
         float cameraSpeed = 0.1f;
 
         if (key == GLFW_KEY_W) {
-            camera.moveForward();
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, camera.forward() * cameraSpeed); //moves object
+            if (followedModel == 0) camera.moveForward();
+            else if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
         }
         if (key == GLFW_KEY_S) {
-            camera.moveBack();
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -camera.forward() * cameraSpeed); //moves object
+
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveBack();
         }// Move backward
         if (key == GLFW_KEY_A) {
-            camera.moveLeft();
-            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0,1,0) ));
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -right*cameraSpeed); //moves object
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveLeft();
         }
         if (key == GLFW_KEY_D) {
-            camera.moveRight();
-            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0, 1, 0)));
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, right*cameraSpeed); //moves object
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveRight();
         }
 
         if (key == GLFW_KEY_LEFT) {
@@ -545,8 +572,18 @@ public:
             printf("Let's rotate!");
             glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
 
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            if (followedModel == 0) {
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            }
+            else if (followedModel == 1) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.y, true);
+            }
+            else if (followedModel == 2) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.y, true);
+            }
             m_viewMatrix = camera.viewMatrix();
         }
         //std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
