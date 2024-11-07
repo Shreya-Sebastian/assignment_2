@@ -253,9 +253,11 @@ public:
         int dummyInteger = 0; // Initialized to 0
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
-        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(0.5f, 0.0f, 0.5f));
+        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(2.5f, 2.0f, 2.5f));
         //glm::mat4 rotationMatrix = glm::rotate(m_modelMatrix_wolf, 5.0f, glm::vec3(0.0f,1.0f,0.0f));
-        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        //glm::vec3 directio_m = glm::normalize(camera.cameraPos() - glm::vec3(0.0f,0.0f, 0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f), directio_m, glm::vec3(0.0f, 1.0f, 0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), direction, glm::vec3(0.0f, 1.0f, 0.0f));
         //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
         // Set up the skybox VAO, VBO, and EBO
@@ -285,6 +287,7 @@ public:
 
 
         while (!m_window.shouldClose()) {
+            printf("%i", followedModel);
             // Update input and animations
             //m_window.updateInput();
 
@@ -309,12 +312,32 @@ public:
             m_window.updateInput();
             angle1 += 0.001f;
             angle2 += 0.0025f;
-
             // ImGui controls
             ImGui::Begin("Window");
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+            const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
+
+            if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
+                if (ImGui::Selectable("Free camera", followedModel == 0)) {
+                    followedModel = 0; 
+                    camera.setFree();
+                }
+                if (ImGui::Selectable("Wolf 1", followedModel == 1)) {
+                    followedModel = 1; 
+                    camera.setFollowCharacter(m_modelMatrix_wolf);
+                }
+                if (ImGui::Selectable("Wolf 2", followedModel == 2)) {
+                    followedModel = 2;
+                    camera.setFollowCharacter(m_modelMatrix_wolf_2);
+                }
+                m_viewMatrix = camera.viewMatrix();
+
+                ImGui::EndCombo();
+            }
+            //ImGui::Combo("Choose Wolf", &followedModel, options, IM_ARRAYSIZE(options));
+
             ImGui::End();
 
 
@@ -363,7 +386,7 @@ public:
 
 
             // Print out the value of hasTexCoords for debugging
-            std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
+            // std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
             // Parent Cube Transformation (environment-mapped reflective cube)
             glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), bezierPosition);
@@ -459,24 +482,54 @@ public:
         float cameraSpeed = 0.1f;
 
         if (key == GLFW_KEY_W) {
-            camera.moveForward();
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, camera.forward() * cameraSpeed); //moves object
+            if (followedModel == 0) camera.moveForward();
+            else if (followedModel == 1) {
+
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed* glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed *glm::vec3(0.0f, 0.0f, 1.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            
         }
         if (key == GLFW_KEY_S) {
-            camera.moveBack();
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -camera.forward() * cameraSpeed); //moves object
+            
+        if (followedModel == 1) {
+
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+            camera.setFollowCharacter(m_modelMatrix_wolf);
+        }
+        else if (followedModel == 2) {
+            m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
+            camera.setFollowCharacter(m_modelMatrix_wolf_2);
+        } else camera.moveBack();
         }// Move backward
         if (key == GLFW_KEY_A) {
-            camera.moveLeft();
-            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0,1,0) ));
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -right*cameraSpeed); //moves object
+            if (followedModel == 1) {
+
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveLeft();
         }
         if (key == GLFW_KEY_D) {
             camera.moveRight();
-            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0, 1, 0)));
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, right*cameraSpeed); //moves object
-        }
+            if (followedModel == 1) {
 
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+        }
         if (key == GLFW_KEY_LEFT) {
             camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, false);
         }
@@ -496,6 +549,7 @@ public:
         }
 
         m_viewMatrix = camera.viewMatrix();
+
     }
 
 
@@ -515,11 +569,23 @@ public:
             printf("Let's rotate!");
             glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
 
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            if (followedModel == 0) {
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            }
+            else if (followedModel == 1) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.y, true);
+            }
+            else if (followedModel == 2) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.y, true);
+            }
+
+
             m_viewMatrix = camera.viewMatrix();
         }
-        std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
+        //std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
         m_prevCursorPos = cursorPos;
     }
 
@@ -675,6 +741,7 @@ private:
     glm::mat4 m_modelMatrix{ 1.0f };
     glm::mat4 m_modelMatrix_wolf{ 1.0f };
     glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
+    int followedModel{ 0 };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);

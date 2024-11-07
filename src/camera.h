@@ -18,11 +18,14 @@ public:
     void moveRight();
     void moveBack();
     void rotate(const glm::vec3& objectPosition, float degrees, bool up);
+    void lookCharacter(const glm::mat4 modelMatrix);
 
     //change settings
-    void setFollowCharacter();
+    void setFollowCharacter(const glm::mat4 modelMatrix);
+    void setFree();
     void setTopView();
     void setUserInteraction(bool enabled);
+
 
     //getters
     glm::vec3 cameraPos() const;
@@ -42,7 +45,8 @@ private:
     const Window* m_pWindow;
     bool m_userInteraction{ true };
     bool m_topView{ false };
-    bool m_followCharacter{ true };
+    bool m_followCharacter{ false };
     glm::dvec2 m_prevCursorPos{ 0 };
     float cameraSpeed{ 0.1f };
+    glm::mat4 characterToFollow{ 0 };
 };
