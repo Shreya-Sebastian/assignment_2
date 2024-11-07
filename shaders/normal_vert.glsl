@@ -1,5 +1,5 @@
 #version 410
-
+//normal vert
 uniform mat4 mvpMatrix;
 uniform mat4 modelMatrix;
 // Normals should be transformed differently than positions:

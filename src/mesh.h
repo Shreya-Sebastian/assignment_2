@@ -11,6 +11,8 @@ DISABLE_WARNINGS_POP()
 #include <filesystem>
 #include <framework/opengl_includes.h>
 
+class Texture;
+
 struct MeshLoadingException : public std::runtime_error {
     using std::runtime_error::runtime_error;
 };
@@ -46,6 +48,10 @@ public:
     // Bind VAO and call glDrawElements.
     void draw(const Shader& drawingShader);
 
+    //getters and setters
+    void setNormalMap(const std::filesystem::path& normalMapPath = {});
+    Texture* getNormalMap();
+
 private:
     void moveInto(GPUMesh&&);
     void freeGpuMemory();
@@ -60,5 +66,6 @@ private:
     GLuint m_vao { INVALID };
     GLuint m_uboMaterial { INVALID };
 
-    
+    std::filesystem::path normalMapPath{};
+    Texture* m_normalMap = nullptr;
 };

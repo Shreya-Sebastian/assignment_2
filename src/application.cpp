@@ -126,8 +126,7 @@ public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
         , m_texture(RESOURCE_ROOT "resources/textures/wall.jpeg")
-        , m_normalMap(RESOURCE_ROOT "resources/textures/normalmap.png")
-         
+        , m_normalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg")
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
@@ -171,6 +170,7 @@ public:
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
         wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+        //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
@@ -232,6 +232,11 @@ public:
             skyboxBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/skybox_vert.glsl");
             skyboxBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/skybox_frag.glsl");
             m_skyboxShader = skyboxBuilder.build();
+
+            ShaderBuilder normalBuilder;
+            normalBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
+            m_normalShader = normalBuilder.build();
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
@@ -329,7 +334,8 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            m_defaultShader.bind(); 
+            
+            m_defaultShader.bind();
             glm::vec3 lightPos = glm::vec3(1.0f);
 
             
@@ -344,21 +350,26 @@ public:
                 glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
                 glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
                 glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
+
                 mesh.draw(m_defaultShader);
             }
 
+            m_normalShader.bind();
+
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
-                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
-                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(0.1f, 0.5f, 0.7f)));
-                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
-                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
-                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.1);
-                mesh.draw(m_defaultShader);
+                glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), true);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), 0.3);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), 0.1);
+                m_normalMap.bind(GL_TEXTURE1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                mesh.draw(m_normalShader);
             }
 
 
@@ -660,6 +671,7 @@ private:
     Shader m_shadowShader;
     Shader m_reflectionShader;
     Shader m_skyboxShader;
+    Shader m_normalShader;
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;

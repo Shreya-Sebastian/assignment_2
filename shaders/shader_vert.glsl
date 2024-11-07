@@ -1,5 +1,4 @@
-#version 410
-
+#version 410 
 uniform mat4 mvpMatrix;
 uniform mat4 modelMatrix;
 // Normals should be transformed differently than positions:
