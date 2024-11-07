@@ -322,16 +322,15 @@ public:
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
-            ImGui::Checkbox("Normal Mapping", &m_normalMapping);
             const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
 
             if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
                 if (ImGui::Selectable("Free camera", followedModel == 0)) {
-                    followedModel = 0; 
+                    followedModel = 0;
                     camera.setFree();
                 }
                 if (ImGui::Selectable("Wolf 1", followedModel == 1)) {
-                    followedModel = 1; 
+                    followedModel = 1;
                     camera.setFollowCharacter(m_modelMatrix_wolf);
                 }
                 if (ImGui::Selectable("Wolf 2", followedModel == 2)) {
@@ -342,7 +341,22 @@ public:
 
                 ImGui::EndCombo();
             }
-            //ImGui::Combo("Choose Wolf", &followedModel, options, IM_ARRAYSIZE(options));
+
+            ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
+            ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
+            ImGui::Checkbox("Normal Mapping", &m_normalMapping);
+            ImGui::Checkbox("Wolf 1 PBR", &wolf1pbr);
+            ImGui::Checkbox("Wolf 2 PBR", &wolf2pbr);
+            ImGui::Text("PBR settings");
+            ImGui::SliderFloat("Wolf 1 metallic", &wolf1metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 1 roughness", &wolf1roughness, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 2 metallic", &wolf2metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 2 roughness", &wolf2roughness, 0.0f, 1.0f);
+            ImGui::Text("Simple shader settings");
+            ImGui::ColorEdit3("Ks", glm::value_ptr(ks));
+            ImGui::ColorEdit3("Kd", glm::value_ptr(kd));
+            ImGui::SliderFloat("Shininess", &shininess, 0.0f, 256.0f);
+            ImGui::Checkbox("Specular", &specular);
 
             ImGui::End();
 
@@ -359,23 +373,29 @@ public:
             //glDisable(GL_BLEND);
 
             
-            m_defaultShader.bind();
+            m_normalShader.bind();
             glm::vec3 lightPos = glm::vec3(1.0f);
 
             
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf;
-                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
-                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
-                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
-                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
-                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
-
-                mesh.draw(m_defaultShader);
+                glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+                glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
+                glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
+                glUniform3fv(m_normalShader.getUniformLocation("ks"), 1, glm::value_ptr(ks));
+                glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), wolf1pbr);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), wolf1metallic);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), wolf1roughness);
+                glUniform1f(m_normalShader.getUniformLocation("shininess"), shininess);
+                m_normalMap.bind(GL_TEXTURE1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
+                mesh.draw(m_normalShader);
             }
 
             m_normalShader.bind();
@@ -386,10 +406,15 @@ public:
                 glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
                 glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.f, 1.0f, 1.0f)));
                 glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
+                glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
+                glUniform3fv(m_normalShader.getUniformLocation("ks"), 1, glm::value_ptr(ks));
                 glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_normalShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_normalShader.getUniformLocation("metallic"), 0.3);
-                glUniform1f(m_normalShader.getUniformLocation("roughness"), 0.1);
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), wolf2pbr);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), wolf2metallic);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), wolf2roughness);
+                glUniform1f(m_normalShader.getUniformLocation("shininess"), shininess);
+                glUniform1i(m_normalShader.getUniformLocation("specular"), specular);
                 m_normalMap.bind(GL_TEXTURE1);
                 glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
                 glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
@@ -602,9 +627,7 @@ public:
 
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             std::cout << "Pressed mouse button: " << button << std::endl;
-            
             mousePressed = true;
-            
         }
         
     }
@@ -748,6 +771,19 @@ private:
     glm::mat4 m_modelMatrix{ 1.0f };
     glm::mat4 m_modelMatrix_wolf{ 1.0f };
     glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
+    glm::vec3 lightColor{ 1.0f };
+
+    glm::vec3 ks{ 1.0f };
+    glm::vec3 kd{ 1.0f };
+    float shininess{ 16.0 };
+    bool specular{ false };
+
+    float wolf1metallic{0.4f};
+    float wolf2metallic{ 0.6f};
+    float wolf1roughness{0.8f};
+    float wolf2roughness{0.1f};
+    bool wolf1pbr{ true };
+    bool wolf2pbr{ true };
     int followedModel{ 0 };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);

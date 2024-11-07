@@ -1,12 +1,6 @@
 #version 410
 
-layout(std140) uniform Material // Must match the GPUMaterial defined in src/mesh.h
-{
-    vec3 kd;
-	vec3 ks;
-	float shininess;
-	float transparency;
-};
+
 
 uniform sampler2D colorMap;
 uniform sampler2D normalMap;
@@ -25,6 +19,12 @@ uniform vec3 cameraPos;
 uniform bool wolf;
 uniform float metallic;
 uniform float roughness;
+uniform vec3 lightColor;
+
+uniform vec3 ks;
+uniform vec3 kd;
+uniform float shininess;
+uniform bool specular;
 
 const float PI = 3.14159265359;
 
@@ -85,7 +85,6 @@ void main()
     if (normalMapping){
         NNdotL = dot(Nnormal, light_dir);
     }
-    vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
 
     vec3 normal = normalize(fragNormal);
     vec3 V = normalize(cameraPos - fragPosition);
@@ -129,31 +128,27 @@ kD *= 1.0 - metallic;
         fragColor = NNdotL * vec4(Lo, 1.0);
         } 
         
-        else if (false) {
-        vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
+        else {
+       
         vec3 lightDir = normalize(lightPos - fragPosition);
         float diff = max(dot(normal, lightDir), 0.0);
-        vec3 diffuse = diff * lightColor * objectColor;
+        vec3 diffuse = kd * diff * lightColor * objectColor;
         vec3 ambientColor = vec3(0.1, 0.1, 0.1); 
         vec3 ambient = ambientColor * lightColor * objectColor; 
         vec3 accumulatedColor = diffuse + ambient;
 
-        if (false) {
+        if (specular) {
            vec3 R = reflect(-lightDir, normal);
             vec3 V = normalize(cameraPos - fragPosition);
             float spec = max(dot(R, V), 0.0); 
-            vec3 specular = objectColor * pow(spec, 128.0);
+            vec3 specular = ks * objectColor * pow(spec, shininess);
             accumulatedColor += specular * lightColor;
-        
-        
         }
+
         fragColor = NNdotL * vec4(accumulatedColor, 1.0);
         }
         
         
         
-        else {
-            fragColor = NNdotL * vec4(color, 1.0);
-        } 
 
 }
