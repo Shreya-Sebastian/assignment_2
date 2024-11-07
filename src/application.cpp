@@ -378,6 +378,7 @@ public:
                 mesh.draw(m_defaultShader);
             }
 
+            m_normalShader.bind();
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
                 glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
