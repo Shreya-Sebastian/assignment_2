@@ -320,6 +320,7 @@ public:
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+            ImGui::Checkbox("Normal Mapping", &m_normalMapping);
             ImGui::End();
 
 
@@ -369,6 +370,7 @@ public:
                 glUniform1f(m_normalShader.getUniformLocation("roughness"), 0.1);
                 m_normalMap.bind(GL_TEXTURE1);
                 glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
                 mesh.draw(m_normalShader);
             }
 
@@ -678,6 +680,7 @@ private:
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    bool m_normalMapping{ false };
     glm::dvec2 m_prevCursorPos;
 
 

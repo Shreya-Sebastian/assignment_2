@@ -13,7 +13,7 @@ uniform sampler2D normalMap;
 
 
 uniform bool hasTexCoords;
-// uniform bool useMaterial;
+uniform bool normalMapping;
 uniform vec3 color;
 
 in vec3 fragPosition;
@@ -80,8 +80,11 @@ void main()
     Nnormal = Nnormal * 2.0 - 1.0;
     Nnormal = normalize(-1* Nnormal);
 
-    float NNdotL = dot(Nnormal, light_dir);
-
+    float NNdotL = 1.f;
+    
+    if (normalMapping){
+        NNdotL = dot(Nnormal, light_dir);
+    }
     vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
 
     vec3 normal = normalize(fragNormal);
