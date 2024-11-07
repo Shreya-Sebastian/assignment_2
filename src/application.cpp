@@ -126,8 +126,7 @@ public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
         , m_texture(RESOURCE_ROOT "resources/textures/wall.jpeg")
-        , m_normalMap(RESOURCE_ROOT "resources/textures/normalmap.png")
-         
+        , m_normalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg")
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
@@ -171,6 +170,7 @@ public:
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
         wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+        //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
@@ -232,6 +232,11 @@ public:
             skyboxBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/skybox_vert.glsl");
             skyboxBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/skybox_frag.glsl");
             m_skyboxShader = skyboxBuilder.build();
+
+            ShaderBuilder normalBuilder;
+            normalBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
+            m_normalShader = normalBuilder.build();
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
@@ -352,7 +357,8 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            m_defaultShader.bind(); 
+            
+            m_defaultShader.bind();
             glm::vec3 lightPos = glm::vec3(1.0f);
 
             
@@ -367,6 +373,7 @@ public:
                 glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
                 glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
                 glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
+
                 mesh.draw(m_defaultShader);
             }
 
@@ -482,54 +489,24 @@ public:
         float cameraSpeed = 0.1f;
 
         if (key == GLFW_KEY_W) {
-            if (followedModel == 0) camera.moveForward();
-            else if (followedModel == 1) {
-
-                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed* glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
-                camera.setFollowCharacter(m_modelMatrix_wolf);
-            }
-            else if (followedModel == 2) {
-                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed *glm::vec3(0.0f, 0.0f, 1.0f));
-                camera.setFollowCharacter(m_modelMatrix_wolf_2);
-            }
-            
+            camera.moveForward();
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, camera.forward() * cameraSpeed); //moves object
         }
         if (key == GLFW_KEY_S) {
-            
-        if (followedModel == 1) {
-
-            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
-            camera.setFollowCharacter(m_modelMatrix_wolf);
-        }
-        else if (followedModel == 2) {
-            m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
-            camera.setFollowCharacter(m_modelMatrix_wolf_2);
-        } else camera.moveBack();
+            camera.moveBack();
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -camera.forward() * cameraSpeed); //moves object
         }// Move backward
         if (key == GLFW_KEY_A) {
-            if (followedModel == 1) {
-
-                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
-                camera.setFollowCharacter(m_modelMatrix_wolf);
-            }
-            else if (followedModel == 2) {
-                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
-                camera.setFollowCharacter(m_modelMatrix_wolf_2);
-            }
-            else camera.moveLeft();
+            camera.moveLeft();
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0,1,0) ));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -right*cameraSpeed); //moves object
         }
         if (key == GLFW_KEY_D) {
             camera.moveRight();
-            if (followedModel == 1) {
-
-                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
-                camera.setFollowCharacter(m_modelMatrix_wolf);
-            }
-            else if (followedModel == 2) {
-                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
-                camera.setFollowCharacter(m_modelMatrix_wolf_2);
-            }
+            glm::vec3 right = glm::normalize(glm::cross(camera.forward(), glm::vec3(0, 1, 0)));
+            m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, right*cameraSpeed); //moves object
         }
+
         if (key == GLFW_KEY_LEFT) {
             camera.rotate(glm::vec3(m_modelMatrix[3]), -10.0f, false);
         }
@@ -549,7 +526,6 @@ public:
         }
 
         m_viewMatrix = camera.viewMatrix();
-
     }
 
 
@@ -569,20 +545,8 @@ public:
             printf("Let's rotate!");
             glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
 
-            if (followedModel == 0) {
-                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
-                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
-            }
-            else if (followedModel == 1) {
-                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.x, false);
-                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.y, true);
-            }
-            else if (followedModel == 2) {
-                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.x, false);
-                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.y, true);
-            }
-
-
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
             m_viewMatrix = camera.viewMatrix();
         }
         //std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
@@ -726,12 +690,14 @@ private:
     Shader m_shadowShader;
     Shader m_reflectionShader;
     Shader m_skyboxShader;
+    Shader m_normalShader;
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    bool m_normalMapping{ false };
     glm::dvec2 m_prevCursorPos;
 
 

@@ -1,5 +1,5 @@
-#version 410
-
+#version 410 
+//default frag
 layout(std140) uniform Material // Must match the GPUMaterial defined in src/mesh.h
 {
     vec3 kd;
@@ -9,6 +9,9 @@ layout(std140) uniform Material // Must match the GPUMaterial defined in src/mes
 };
 
 uniform sampler2D colorMap;
+uniform sampler2D normalMap;
+
+
 uniform bool hasTexCoords;
 // uniform bool useMaterial;
 uniform vec3 color;
@@ -139,5 +142,6 @@ kD *= 1.0 - metallic;
         else {
             fragColor = vec4(color, 1.0);
         } 
+
 }
 
