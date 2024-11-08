@@ -86,6 +86,18 @@ Mesh createCubeMesh() {
     return cubeMesh;
 }
 
+float rectangleVertices[] =
+{
+    // Coords    // texCoords
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f,  0.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f,
+
+     1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f
+};
+
 float skyboxVertices[] = {
     // Positions          
     -1.0f,  1.0f, -1.0f,  // 0: Top-left-front
@@ -238,6 +250,12 @@ public:
             normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
             m_normalShader = normalBuilder.build();
 
+            ShaderBuilder fboBuilder;
+            fboBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/framebuffer_vert.glsl");
+            fboBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/framebuffer_frag.glsl");
+            m_fboShader = fboBuilder.build();
+
+
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
@@ -265,6 +283,19 @@ public:
         //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), direction, glm::vec3(0.0f, 1.0f, 0.0f));
         //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
+
+        // Prepare framebuffer rectangle VBO and VAO
+        unsigned int rectVAO, rectVBO;
+        glGenVertexArrays(1, &rectVAO);
+        glGenBuffers(1, &rectVBO);
+        glBindVertexArray(rectVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
         glGenVertexArrays(1, &skyboxVAO);
@@ -281,6 +312,33 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+        // Create Frame Buffer Object
+        unsigned int FBO;
+        glGenFramebuffers(1, &FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+        // Create Framebuffer Texture
+        unsigned int framebufferTexture;
+        glGenTextures(1, &framebufferTexture);
+        glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
+
+        // Create Render Buffer Object
+        unsigned int RBO;
+        glGenRenderbuffers(1, &RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 1024);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+        auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer error: " << fboStatus << std::endl;
 
 
         float lastFrameTime = static_cast<float>(glfwGetTime());
@@ -322,6 +380,9 @@ public:
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+
+
+
             const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
 
             if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
@@ -341,7 +402,8 @@ public:
 
                 ImGui::EndCombo();
             }
-
+            ImGui::Text("Post processing options");
+            ImGui::Checkbox("Inverse color", &inverseColor);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
             ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
             ImGui::Checkbox("Normal Mapping", &m_normalMapping);
@@ -367,6 +429,8 @@ public:
 
 
             // Clear the screen
+           glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -502,6 +566,17 @@ public:
 
             // Reset depth function to default
             glDepthFunc(GL_LESS);
+
+            m_fboShader.bind();
+            glUniform1i(m_fboShader.getUniformLocation("screenTexture"), 0);
+            glUniform1i(m_fboShader.getUniformLocation("inverseColor"), inverseColor);
+            // Bind the default framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            // Draw the framebuffer rectangle
+            glBindVertexArray(rectVAO);
+            glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
+            glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
             m_window.swapBuffers();
@@ -755,6 +830,7 @@ private:
     Shader m_reflectionShader;
     Shader m_skyboxShader;
     Shader m_normalShader;
+    Shader m_fboShader;
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
@@ -785,6 +861,8 @@ private:
     bool wolf1pbr{ true };
     bool wolf2pbr{ true };
     int followedModel{ 0 };
+
+    bool inverseColor{ false };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
