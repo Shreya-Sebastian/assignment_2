@@ -23,6 +23,7 @@ DISABLE_WARNINGS_POP()
 #include <functional>
 #include <iostream>
 #include <vector>
+#include "tiny_obj_loader.h"
 
 
 Mesh createCubeMesh() {
@@ -126,13 +127,58 @@ struct AABB {
 
 
 
+std::vector<glm::vec3> wolfVertices;
+std::vector<glm::vec3> wolfNormals;
+std::vector<glm::vec2> wolfTexCoords;
+
+void loadObj(const std::string& filepath) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;
+
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
+        throw std::runtime_error(warn + err);
+    }
+
+    // Loop over shapes
+    for (const auto& shape : shapes) {
+        // Loop over faces (each face has 3 vertices)
+        for (const auto& index : shape.mesh.indices) {
+            glm::vec3 vertex(
+                attrib.vertices[3 * index.vertex_index + 0],
+                attrib.vertices[3 * index.vertex_index + 1],
+                attrib.vertices[3 * index.vertex_index + 2]
+            );
+            wolfVertices.push_back(vertex);
+
+            if (index.normal_index >= 0) {
+                glm::vec3 normal(
+                    attrib.normals[3 * index.normal_index + 0],
+                    attrib.normals[3 * index.normal_index + 1],
+                    attrib.normals[3 * index.normal_index + 2]
+                );
+                wolfNormals.push_back(normal);
+            }
+
+            if (index.texcoord_index >= 0) {
+                glm::vec2 texCoord(
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    attrib.texcoords[2 * index.texcoord_index + 1]
+                );
+                wolfTexCoords.push_back(texCoord);
+            }
+        }
+    }
+}
+
+
 class Application {
 public:
     Application()
         : m_window("Final Project", glm::ivec2(1024, 1024), OpenGLVersion::GL41)
         , m_texture(RESOURCE_ROOT "resources/textures/wall.jpeg")
-        , m_normalMap(RESOURCE_ROOT "resources/textures/normalmap.png")
-         
+        , m_normalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg")
     {
         m_window.registerKeyCallback([this](int key, int scancode, int action, int mods) {
             if (action == GLFW_PRESS)
@@ -176,6 +222,7 @@ public:
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
         wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+        //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
@@ -238,6 +285,11 @@ public:
             skyboxBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "Shaders/skybox_frag.glsl");
             m_skyboxShader = skyboxBuilder.build();
 
+            ShaderBuilder normalBuilder;
+            normalBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/normal_vert.glsl");
+            normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
+            m_normalShader = normalBuilder.build();
+
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
@@ -258,8 +310,12 @@ public:
         int dummyInteger = 0; // Initialized to 0
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
-        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(0.5f, 0.0f, 0.5f));
-        //m_modelMatrix_wolf = camera.rotationMatrix(m_modelMatrix_wolf) * m_modelMatrix_wolf;
+        m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(2.5f, 2.0f, 2.5f));
+        //glm::mat4 rotationMatrix = glm::rotate(m_modelMatrix_wolf, 5.0f, glm::vec3(0.0f,1.0f,0.0f));
+        //glm::vec3 directio_m = glm::normalize(camera.cameraPos() - glm::vec3(0.0f,0.0f, 0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f), directio_m, glm::vec3(0.0f, 1.0f, 0.0f));
+        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), direction, glm::vec3(0.0f, 1.0f, 0.0f));
+        //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -279,6 +335,100 @@ public:
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 
+        loadObj("resources/wolf/Wolf_obj.obj");
+
+
+
+
+        GLuint wolfVBO, wolfVAO, wolfNBO, wolfTBO;
+        glGenVertexArrays(1, &wolfVAO);
+        glGenBuffers(1, &wolfVBO);
+        glGenBuffers(1, &wolfNBO);
+        glGenBuffers(1, &wolfTBO);
+
+        // Bind VAO
+        glBindVertexArray(wolfVAO);
+
+        // Vertex positions
+        glBindBuffer(GL_ARRAY_BUFFER, wolfVBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfVertices.size() * sizeof(glm::vec3), wolfVertices.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(0);
+
+        // Normals
+        glBindBuffer(GL_ARRAY_BUFFER, wolfNBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfNormals.size() * sizeof(glm::vec3), wolfNormals.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(1);
+
+        // Texture coordinates
+        glBindBuffer(GL_ARRAY_BUFFER, wolfTBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfTexCoords.size() * sizeof(glm::vec2), wolfTexCoords.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(2);
+
+        // Unbind VAO
+        glBindVertexArray(0);
+
+        std::vector<glm::vec3> wolfTangents(wolfVertices.size());
+        std::vector<glm::vec3> wolfBitangents(wolfVertices.size());
+
+        for (size_t i = 0; i < wolfVertices.size(); i += 3) {
+            glm::vec3 pos1 = wolfVertices[i];
+            glm::vec3 pos2 = wolfVertices[i + 1];
+            glm::vec3 pos3 = wolfVertices[i + 2];
+
+            glm::vec2 uv1 = wolfTexCoords[i];
+            glm::vec2 uv2 = wolfTexCoords[i + 1];
+            glm::vec2 uv3 = wolfTexCoords[i + 2];
+
+            glm::vec3 edge1 = pos2 - pos1;
+            glm::vec3 edge2 = pos3 - pos1;
+            glm::vec2 deltaUV1 = uv2 - uv1;
+            glm::vec2 deltaUV2 = uv3 - uv1;
+
+            float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+            glm::vec3 tangent;
+            tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+            tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+            tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+            tangent = glm::normalize(tangent);
+
+            glm::vec3 bitangent;
+            bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+            bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+            bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+            bitangent = glm::normalize(bitangent);
+
+            wolfTangents[i] = tangent;
+            wolfTangents[i + 1] = tangent;
+            wolfTangents[i + 2] = tangent;
+
+            wolfBitangents[i] = bitangent;
+            wolfBitangents[i + 1] = bitangent;
+            wolfBitangents[i + 2] = bitangent;
+        }
+
+
+        GLuint wolfTanBO, wolfBitanBO;
+        glGenBuffers(1, &wolfTanBO);
+        glGenBuffers(1, &wolfBitanBO);
+
+        // Tangents
+        glBindBuffer(GL_ARRAY_BUFFER, wolfTanBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfTangents.size() * sizeof(glm::vec3), wolfTangents.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(3);
+
+        // Bitangents
+        glBindBuffer(GL_ARRAY_BUFFER, wolfBitanBO);
+        glBufferData(GL_ARRAY_BUFFER, wolfBitangents.size() * sizeof(glm::vec3), wolfBitangents.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(4);
+
+        glBindVertexArray(0);
+
         float lastFrameTime = static_cast<float>(glfwGetTime());
         const float positionTolerance = 0.01f;  // Tolerance for reaching the ends
         //float deltaTime = currentFrameTime - lastFrameTime;
@@ -288,6 +438,7 @@ public:
 
 
         while (!m_window.shouldClose()) {
+            printf("%i", followedModel);
             // Update input and animations
             //m_window.updateInput();
 
@@ -312,12 +463,47 @@ public:
             m_window.updateInput();
             angle1 += 0.001f;
             angle2 += 0.0025f;
-
             // ImGui controls
             ImGui::Begin("Window");
             ImGui::InputInt("This is an integer input", &dummyInteger);
             ImGui::Text("Value is: %i", dummyInteger);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
+            const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
+
+            if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
+                if (ImGui::Selectable("Free camera", followedModel == 0)) {
+                    followedModel = 0;
+                    camera.setFree();
+                }
+                if (ImGui::Selectable("Wolf 1", followedModel == 1)) {
+                    followedModel = 1;
+                    camera.setFollowCharacter(m_modelMatrix_wolf);
+                }
+                if (ImGui::Selectable("Wolf 2", followedModel == 2)) {
+                    followedModel = 2;
+                    camera.setFollowCharacter(m_modelMatrix_wolf_2);
+                }
+                m_viewMatrix = camera.viewMatrix();
+
+                ImGui::EndCombo();
+            }
+
+            ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
+            ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
+            ImGui::Checkbox("Normal Mapping", &m_normalMapping);
+            ImGui::Checkbox("Wolf 1 PBR", &wolf1pbr);
+            ImGui::Checkbox("Wolf 2 PBR", &wolf2pbr);
+            ImGui::Text("PBR settings");
+            ImGui::SliderFloat("Wolf 1 metallic", &wolf1metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 1 roughness", &wolf1roughness, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 2 metallic", &wolf2metallic, 0.0f, 1.0f);
+            ImGui::SliderFloat("Wolf 2 roughness", &wolf2roughness, 0.0f, 1.0f);
+            ImGui::Text("Simple shader settings");
+            ImGui::ColorEdit3("Ks", glm::value_ptr(ks));
+            ImGui::ColorEdit3("Kd", glm::value_ptr(kd));
+            ImGui::SliderFloat("Shininess", &shininess, 0.0f, 256.0f);
+            ImGui::Checkbox("Specular", &specular);
+
             ImGui::End();
 
 
@@ -332,41 +518,57 @@ public:
             glEnable(GL_DEPTH_TEST);
             //glDisable(GL_BLEND);
 
-            m_defaultShader.bind(); 
+            
+            m_normalShader.bind();
             glm::vec3 lightPos = glm::vec3(1.0f);
 
             
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf;
-                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
-                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
-                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
-                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
-                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.6);
-                mesh.draw(m_defaultShader);
+                glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
+                glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
+                glUniform3fv(m_normalShader.getUniformLocation("ks"), 1, glm::value_ptr(ks));
+                glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), wolf1pbr);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), wolf1metallic);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), wolf1roughness);
+                glUniform1f(m_normalShader.getUniformLocation("shininess"), shininess);
+                m_normalMap.bind(GL_TEXTURE1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
+                mesh.draw(m_normalShader);
             }
 
+            m_normalShader.bind();
             for (GPUMesh& mesh : wolfMeshes) {
                 const glm::mat4 mvpMatrix = m_projectionMatrix * m_viewMatrix * m_modelMatrix_wolf_2;
-                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+                glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
-                glUniformMatrix3fv(m_defaultShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(0.1f, 0.5f, 0.7f)));
-                glUniform3fv(m_defaultShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
-                glUniform3fv(m_defaultShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
-                glUniform1i(m_defaultShader.getUniformLocation("wolf"), true);
-                glUniform1f(m_defaultShader.getUniformLocation("metallic"), 0.9);
-                glUniform1f(m_defaultShader.getUniformLocation("roughness"), 0.1);
-                mesh.draw(m_defaultShader);
+                glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
+                glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
+                glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
+                glUniform3fv(m_normalShader.getUniformLocation("ks"), 1, glm::value_ptr(ks));
+                glUniform3fv(m_normalShader.getUniformLocation("cameraPos"), 1, glm::value_ptr(camera.cameraPos()));
+                glUniform1i(m_normalShader.getUniformLocation("wolf"), wolf2pbr);
+                glUniform1f(m_normalShader.getUniformLocation("metallic"), wolf2metallic);
+                glUniform1f(m_normalShader.getUniformLocation("roughness"), wolf2roughness);
+                glUniform1f(m_normalShader.getUniformLocation("shininess"), shininess);
+                glUniform1i(m_normalShader.getUniformLocation("specular"), specular);
+                m_normalMap.bind(GL_TEXTURE1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMap"), 1);
+                glUniform1i(m_normalShader.getUniformLocation("normalMapping"), m_normalMapping);
+                mesh.draw(m_normalShader);
             }
 
-
             // Print out the value of hasTexCoords for debugging
-            std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
+            // std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
             // Parent Cube Transformation (environment-mapped reflective cube)
             glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), bezierPosition);
@@ -462,23 +664,49 @@ public:
         float cameraSpeed = 0.1f;
 
         if (key == GLFW_KEY_W) {
-            camera.moveForward();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, cameraSpeed)); //moves object
+            if (followedModel == 0) camera.moveForward();
+            else if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
         }
-
-
         if (key == GLFW_KEY_S) {
-            camera.moveBack();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(0.0f, 0.0f, -cameraSpeed)); //moves object
+
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(0.0f, 0.0f, 1.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveBack();
         }// Move backward
         if (key == GLFW_KEY_A) {
-            camera.moveLeft();
-
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(-cameraSpeed, 0.0f, 0.0f)); //moves object
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveLeft();
         }
         if (key == GLFW_KEY_D) {
-            camera.moveRight();
-            //m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, glm::vec3(cameraSpeed, 0.0f, 0.0f)); //moves object
+            if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(1.0f, 0.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+            else camera.moveRight();
         }
 
         if (key == GLFW_KEY_LEFT) {
@@ -519,11 +747,21 @@ public:
             printf("Let's rotate!");
             glm::vec2 delta = 0.5f * glm::vec2(cursorPos - m_prevCursorPos);
 
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
-            camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            if (followedModel == 0) {
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix[3]), delta.y, true);
+            }
+            else if (followedModel == 1) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf[3]), delta.y, true);
+            }
+            else if (followedModel == 2) {
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.x, false);
+                camera.rotate(glm::vec3(m_modelMatrix_wolf_2[3]), delta.y, true);
+            }
             m_viewMatrix = camera.viewMatrix();
         }
-        std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
+        //std::cout << "Mouse at position: " << cursorPos.x << " " << cursorPos.y << std::endl;
         m_prevCursorPos = cursorPos;
     }
 
@@ -535,9 +773,7 @@ public:
 
         if (button == GLFW_MOUSE_BUTTON_LEFT) {
             std::cout << "Pressed mouse button: " << button << std::endl;
-            
             mousePressed = true;
-            
         }
         
     }
@@ -669,24 +905,42 @@ private:
     Shader m_shadowShader;
     Shader m_reflectionShader;
     Shader m_skyboxShader;
+    Shader m_normalShader;
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
     Texture m_normalMap;
     bool m_useMaterial{ true };
+    bool m_normalMapping{ false };
     glm::dvec2 m_prevCursorPos;
 
-    glm::vec3 cameraTarget = glm::vec3(0);
-    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
-    Camera camera{ &m_window, cameraPos, cameraTarget };
+
 
     // Projection and view matrices for you to fill in and use
     glm::mat4 m_projectionMatrix = glm::perspective(glm::radians(80.0f), 1.0f, 0.1f, 30.0f);
-    glm::mat4 m_viewMatrix = camera.viewMatrix();
     glm::mat4 m_modelMatrix{ 1.0f };
     glm::mat4 m_modelMatrix_wolf{ 1.0f };
     glm::mat4 m_modelMatrix_wolf_2{ 1.0f };
+    glm::vec3 lightColor{ 1.0f };
+
+    glm::vec3 ks{ 1.0f };
+    glm::vec3 kd{ 1.0f };
+    float shininess{ 16.0 };
+    bool specular{ false };
+
+    float wolf1metallic{0.4f};
+    float wolf2metallic{ 0.6f};
+    float wolf1roughness{0.8f};
+    float wolf2roughness{0.1f};
+    bool wolf1pbr{ true };
+    bool wolf2pbr{ true };
+    int followedModel{ 0 };
+
+    glm::vec3 cameraTarget = glm::vec3(0.0f);
+    glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
+    Camera camera{ &m_window, cameraPos, cameraTarget };
+    glm::mat4 m_viewMatrix = camera.viewMatrix();
     bool mousePressed = false;
 
 

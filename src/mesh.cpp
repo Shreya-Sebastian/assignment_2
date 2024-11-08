@@ -5,6 +5,7 @@ DISABLE_WARNINGS_PUSH()
 DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <vector>
+#include "texture.h"
 
 GPUMaterial::GPUMaterial(const Material& material) :
     kd(material.kd),
@@ -100,6 +101,20 @@ void GPUMesh::draw(const Shader& drawingShader)
     // Draw the mesh's triangles
     glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLES, m_numIndices, GL_UNSIGNED_INT, nullptr);
+}
+
+void GPUMesh::setNormalMap(const std::filesystem::path& normalMapPath)
+{
+    if (normalMapPath.empty()) return;
+
+    this->normalMapPath = normalMapPath;
+    m_normalMap = new Texture(normalMapPath);
+}
+
+Texture* GPUMesh::getNormalMap()
+{
+    if (normalMapPath.empty()) return nullptr;
+    return m_normalMap;
 }
 
 void GPUMesh::moveInto(GPUMesh&& other)
