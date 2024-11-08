@@ -24,6 +24,9 @@ DISABLE_WARNINGS_POP()
 #include <iostream>
 #include <vector>
 #include "tiny_obj_loader.h"
+#include <glm/gtx/component_wise.hpp>
+#include <random>
+
 
 
 Mesh createCubeMesh() {
@@ -132,53 +135,10 @@ unsigned int skyboxIndices[] = {
     6, 2, 1
 };
 
-
-
-std::vector<glm::vec3> wolfVertices;
-std::vector<glm::vec3> wolfNormals;
-std::vector<glm::vec2> wolfTexCoords;
-
-void loadObj(const std::string& filepath) {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
-        throw std::runtime_error(warn + err);
-    }
-
-    // Loop over shapes
-    for (const auto& shape : shapes) {
-        // Loop over faces (each face has 3 vertices)
-        for (const auto& index : shape.mesh.indices) {
-            glm::vec3 vertex(
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            );
-            wolfVertices.push_back(vertex);
-
-            if (index.normal_index >= 0) {
-                glm::vec3 normal(
-                    attrib.normals[3 * index.normal_index + 0],
-                    attrib.normals[3 * index.normal_index + 1],
-                    attrib.normals[3 * index.normal_index + 2]
-                );
-                wolfNormals.push_back(normal);
-            }
-
-            if (index.texcoord_index >= 0) {
-                glm::vec2 texCoord(
-                    attrib.texcoords[2 * index.texcoord_index + 0],
-                    attrib.texcoords[2 * index.texcoord_index + 1]
-                );
-                wolfTexCoords.push_back(texCoord);
-            }
-        }
-    }
-}
-
+struct AABB {
+    float x_min, x_max;
+    float y_min, y_max;
+};
 
 class Application {
 public:
@@ -320,7 +280,7 @@ public:
         float angle2 = 0.0f;
         float parentYPosition = 0.0f;
         float direction = 1.0f;
-        int dummyInteger = 0; // Initialized to 0
+        int collisionCounter = 0; // Initialized to 0
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
         m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(2.5f, 2.0f, 2.5f));
@@ -489,6 +449,33 @@ public:
         //time += speed * deltaTime;  // deltaTime is the frame time
         //if (time > 1.0f) time -= 1.0f;
 
+        glm::vec3 bezierPosition;
+        glm::vec3 randomPosition = glm::vec3(0.0f);
+        // Seed random generator
+        std::mt19937 rng(static_cast<unsigned int>(glfwGetTime()));
+        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+
+        // Variables to control oscillation speed and amplitude
+        //float oscillationSpeedX = 0.5f; // Speed for left-right movement
+        //float oscillationSpeedY = 0.3f; // Speed for up-down movement
+        //float amplitudeX = 1.0f; // Distance it moves left and right
+        //float amplitudeY = 1.0f; // Distance it moves up and down
+        // Adding a phase offset to vary the starting position each time bezier movement is disabled
+        //float phaseOffsetX = 3.14159f * static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Random phase offset for x
+        //float phaseOffsetY = 3.14159f * static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Random phase offset for y
+
+        // Initialize position and direction variables if not already done
+        float cubeXPosition = 0.0f; // Cube�s X position
+        float cubeYPosition = 0.0f; // Cube�s Y position
+        float xDirection = 1.0f;    // X movement direction
+        float yDirection = 1.0f;    // Y movement direction
+
+        // Define movement boundaries and speed
+        const float xBoundary = 1.0f;   // X axis boundary (adjust to room size)
+        const float yBoundary = 1.0f;   // Y axis boundary (adjust to room size)
+        const float movementSpeed = 0.005f; // Speed of movement
+
+
 
         while (!m_window.shouldClose()) {
             printf("%i", followedModel);
@@ -511,15 +498,16 @@ public:
                 m_currentFrame = (m_currentFrame + 1) % m_animationTextures.size();
             }
 
-            glm::vec3 bezierPosition = getConstantSpeedPosition(time);
+
+            //glm::vec3 bezierPosition = getConstantSpeedPosition(time);
 
             m_window.updateInput();
             angle1 += 0.001f;
             angle2 += 0.0025f;
             // ImGui controls
             ImGui::Begin("Window");
-            ImGui::InputInt("This is an integer input", &dummyInteger);
-            ImGui::Text("Value is: %i", dummyInteger);
+            ImGui::InputInt("This is the collision counter", &collisionCounter);
+            ImGui::Text("Value is: %i", collisionCounter);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
 
 
@@ -561,6 +549,7 @@ public:
             ImGui::ColorEdit3("Kd", glm::value_ptr(kd));
             ImGui::SliderFloat("Shininess", &shininess, 0.0f, 256.0f);
             ImGui::Checkbox("Specular", &specular);
+            ImGui::Checkbox("Bezier Curve Movement", &m_bezierMovementEnabled);
 
             ImGui::End();
 
@@ -627,11 +616,34 @@ public:
                 mesh.draw(m_normalShader);
             }
 
+            glm::vec3 cubePosition;
+            // Toggle movement mode
+            if (m_bezierMovementEnabled) {
+                bezierPosition = getConstantSpeedPosition(time);
+                cubePosition = bezierPosition;
+            }
+            else {
+                // Move the cube left/right in the X axis
+                cubeXPosition += movementSpeed * xDirection;
+                if (cubeXPosition > xBoundary || cubeXPosition < -xBoundary) {
+                    xDirection *= -1.0f; // Reverse direction when hitting the boundary
+                }
+
+                // Move the cube up/down in the Y axis
+                cubeYPosition += movementSpeed * yDirection;
+                if (cubeYPosition > yBoundary || cubeYPosition < -yBoundary) {
+                    yDirection *= -1.0f; // Reverse direction when hitting the boundary
+                }
+
+                // Set the cube position, keeping Z position unchanged
+                cubePosition = glm::vec3(cubeXPosition, cubeYPosition, 0.0f);
+            }
+
             // Print out the value of hasTexCoords for debugging
             // std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
             // Parent Cube Transformation (environment-mapped reflective cube)
-            glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), bezierPosition);
+            glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), cubePosition);
             modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -685,6 +697,22 @@ public:
             }
 
             m_meshes[1].draw(m_defaultShader);
+
+            // Logic for collision between wolf and cube
+            AABB cubeAABB = getAABB(modelMatrixParent, cubeMinPoint, cubeMaxPoint); // Cube's AABB
+            AABB wolfAABB = getAABB(m_modelMatrix_wolf, wolfMinPoint, wolfMaxPoint); // Wolf's AABB
+
+            // In your main loop
+            if (isColliding(cubeAABB, wolfAABB)) {
+                if (!collisionDetected) {
+                    collisionCounter++; // Increment counter on first collision detection
+                    std::cout << "Collision detected! Counter: " << collisionCounter << std::endl;
+                    collisionDetected = true; // Set the flag to indicate a collision has been handled
+                }
+            }
+            else {
+                collisionDetected = false; // Reset flag when objects are no longer colliding
+            }
 
             glDepthFunc(GL_LEQUAL); // Ensure skybox depth is always 1.0
 
@@ -955,6 +983,101 @@ public:
         return textureID;
     }
 
+    bool isColliding(const AABB& a, const AABB& b) {
+        return (a.x_min < b.x_max && a.x_max > b.x_min &&
+            a.y_min < b.y_max && a.y_max > b.y_min);
+    }
+
+    AABB getAABB(const glm::mat4& modelMatrix, const glm::vec3& minPoint, const glm::vec3& maxPoint) {
+        glm::vec3 min = glm::vec3(modelMatrix * glm::vec4(minPoint, 1.0f));
+        glm::vec3 max = glm::vec3(modelMatrix * glm::vec4(maxPoint, 1.0f));
+        return AABB{ min.x, max.x, min.y, max.y };
+    }
+
+    unsigned int loadCubemap(const std::vector<std::string>& faces) {
+        unsigned int textureID;
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+        int width, height, channels;
+        for (unsigned int i = 0; i < faces.size(); i++) {
+            Image image(faces[i]);
+            if (!image.getPixels().empty()) {
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
+                    image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.getPixels().data());
+            }
+            else {
+                std::cerr << "Failed to load cubemap texture at path: " << faces[i] << std::endl;
+                throw std::runtime_error("Cubemap texture load failed");
+            }
+        }
+
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+        return textureID;
+    }
+
+    void loadObj(const std::string& filepath) {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
+            throw std::runtime_error(warn + err);
+        }
+
+        // Loop over shapes
+        for (const auto& shape : shapes) {
+            // Loop over faces (each face has 3 vertices)
+            for (const auto& index : shape.mesh.indices) {
+                glm::vec3 vertex(
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                );
+                wolfVertices.push_back(vertex);
+
+                if (index.normal_index >= 0) {
+                    glm::vec3 normal(
+                        attrib.normals[3 * index.normal_index + 0],
+                        attrib.normals[3 * index.normal_index + 1],
+                        attrib.normals[3 * index.normal_index + 2]
+                    );
+                    wolfNormals.push_back(normal);
+                }
+
+                if (index.texcoord_index >= 0) {
+                    glm::vec2 texCoord(
+                        attrib.texcoords[2 * index.texcoord_index + 0],
+                        attrib.texcoords[2 * index.texcoord_index + 1]
+                    );
+                    wolfTexCoords.push_back(texCoord);
+                }
+            }
+        }
+
+        // Calculate the bounding box for the wolf model
+        if (!wolfVertices.empty()) {
+            wolfMinPoint = wolfVertices[0];
+            wolfMaxPoint = wolfVertices[0];
+            for (const glm::vec3& vertex : wolfVertices) {
+                wolfMinPoint.x = std::min(wolfMinPoint.x, vertex.x);
+                wolfMinPoint.y = std::min(wolfMinPoint.y, vertex.y);
+                wolfMinPoint.z = std::min(wolfMinPoint.z, vertex.z);
+
+                wolfMaxPoint.x = std::max(wolfMaxPoint.x, vertex.x);
+                wolfMaxPoint.y = std::max(wolfMaxPoint.y, vertex.y);
+                wolfMaxPoint.z = std::max(wolfMaxPoint.z, vertex.z);
+            }
+        }
+    }
+
+
 private:
     Window m_window;
 
@@ -966,6 +1089,7 @@ private:
     //unsigned int m_cubemapTextureID;
 
     const int NUM_SAMPLES = 100;
+    bool m_bezierMovementEnabled;
 
     // Shader for default rendering and for depth rendering
     Shader m_defaultShader;
@@ -979,7 +1103,7 @@ private:
     std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
     Texture m_normalMap;
-    bool m_useMaterial{ true };
+    bool m_useMaterial{ false };
     bool m_normalMapping{ false };
     glm::dvec2 m_prevCursorPos;
 
@@ -1005,8 +1129,14 @@ private:
     bool wolf2pbr{ true };
     int followedModel{ 0 };
 
+
+    std::vector<glm::vec3> wolfVertices;
+    std::vector<glm::vec3> wolfNormals;
+    std::vector<glm::vec2> wolfTexCoords;
+  
     bool inverseColor{ false };
     bool blacnAndWhite{ false };
+
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
@@ -1058,32 +1188,15 @@ private:
     int m_currentFrame;        // Current frame index
     float m_timeAccumulator;   // Time accumulator for frame switching
 
-    unsigned int loadCubemap(const std::vector<std::string>& faces) {
-        unsigned int textureID;
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+    // Bounding box for cube and wolf
+    glm::vec3 cubeMinPoint = glm::vec3(-0.5f, -0.5f, -0.5f); // Adjust to cube size
+    glm::vec3 cubeMaxPoint = glm::vec3(0.5f, 0.5f, 0.5f);
 
-        int width, height, channels;
-        for (unsigned int i = 0; i < faces.size(); i++) {
-            Image image(faces[i]);
-            if (!image.getPixels().empty()) {
-                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB,
-                    image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, image.getPixels().data());
-            }
-            else {
-                std::cerr << "Failed to load cubemap texture at path: " << faces[i] << std::endl;
-                throw std::runtime_error("Cubemap texture load failed");
-            }
-        }
+    glm::vec3 wolfMinPoint;
+    glm::vec3 wolfMaxPoint;
 
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    bool collisionDetected = false; // Add this as a private member in your Application class
 
-        return textureID;
-    }
     float m_timer{ 0.f };
 };
 
