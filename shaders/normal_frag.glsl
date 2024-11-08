@@ -74,27 +74,33 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 void main()
 {
 
-    vec3 light_pos = {20.f, 20.f, 20.f};
-    vec3 light_dir = normalize(fragPosition - light_pos);
+    vec3 normal = normalize(fragNormal);
+    vec3 V = normalize(cameraPos - fragPosition);
+    vec3 L = lightPos;
+    vec3 objectColor = color;
+
+    vec3 light_dir = normalize(L - fragPosition);
 
     vec3 Nnormal = texture(normalMap, fragTexCoord).rgb;
     Nnormal = Nnormal * 2.0 - 1.0;
-    Nnormal = normalize(-1* Nnormal);
+    Nnormal = normalize(Nnormal);
 
-    vec3 normal = normalize(fragNormal);
-    vec3 V = normalize(cameraPos - fragPosition);
-    vec3 L = normalize(lightPos);
-    vec3 objectColor = color;
+    float NdotL = max(dot(normal, light_dir), 0.0);    
+    float NNdotL = NdotL;
 
     if (normalMapping){
         //TBN = transpose(mat3(T, B, N));
-        normal = normalize(Nnormal * TBN) ;  
+        NNdotL = max(dot(Nnormal, light_dir), 0.0);  ;  
+        //normal = normalize(Nnormal) ;  
+
     }
 
-    if (hasTexCoords) { 
+    if (hasTexCoords) 
+    { 
         fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);   
     }
-    else if (wolf) { 
+    else if (wolf) 
+    { 
         
         vec3 Lo = vec3(0.0);
         vec3 lightDir = normalize(lightPos-fragPosition);
@@ -113,27 +119,26 @@ void main()
         vec3 specular     = numerator / denominator;
         
         vec3 kS = F;
-vec3 kD = vec3(1.0) - kS;
+        vec3 kD = vec3(1.0) - kS;
   
-kD *= 1.0 - metallic;	
-    
-    
+        kD *= 1.0 - metallic;	
 
-    float NdotL = max(dot(normal, lightDir), 0.0);    
+        
    
 
-    Lo += (kD * objectColor / PI + specular) * radiance * NdotL;
+        Lo += (kD * objectColor / PI + specular) * radiance * NdotL;
 
-    vec3 ambient = vec3(0.005) * objectColor;
-    Lo   = ambient + Lo;
-    Lo = Lo / (Lo + vec3(1.0));
-    Lo = pow(Lo, vec3(1.0/2.2)); 
+        vec3 ambient = vec3(0.005) * objectColor;
+        Lo   = ambient + Lo;
+        Lo = Lo / (Lo + vec3(1.0));
+        Lo = pow(Lo, vec3(1.0/2.2)); 
 
 
-        fragColor = vec4(Lo, 1.0);
-        } 
-        
-        else {
+        fragColor = NNdotL * vec4(Lo, 1.0);
+        //fragColor = vec4(normal.xz,0.f, 1.0);
+    } 
+    else 
+    {
        
         vec3 lightDir = normalize(lightPos - fragPosition);
         float diff = max(dot(normal, lightDir), 0.0);
@@ -151,7 +156,7 @@ kD *= 1.0 - metallic;
         }
 
         fragColor = vec4(accumulatedColor, 1.0);
-        }
+    }
         
-
+        //fragColor = vec4(fragTexCoord.xy,0.f, 1.0);
 }
