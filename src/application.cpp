@@ -545,6 +545,7 @@ public:
             }
             ImGui::Text("Post processing options");
             ImGui::Checkbox("Inverse color", &inverseColor);
+            ImGui::Checkbox("Black and white", &blacnAndWhite);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
             ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
             ImGui::Checkbox("Normal Mapping", &m_normalMapping);
@@ -711,6 +712,7 @@ public:
             m_fboShader.bind();
             glUniform1i(m_fboShader.getUniformLocation("screenTexture"), 0);
             glUniform1i(m_fboShader.getUniformLocation("inverseColor"), inverseColor);
+            glUniform1i(m_fboShader.getUniformLocation("blackAndWhite"), blacnAndWhite);
             // Bind the default framebuffer
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             // Draw the framebuffer rectangle
@@ -1004,6 +1006,7 @@ private:
     int followedModel{ 0 };
 
     bool inverseColor{ false };
+    bool blacnAndWhite{ false };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
