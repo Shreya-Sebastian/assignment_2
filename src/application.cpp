@@ -219,10 +219,13 @@ void createPlane() {
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
     }
 
-
+struct AABB {
+    float x_min, x_max;
+    float y_min, y_max;
+};
 
 
 class Application {
@@ -431,9 +434,6 @@ public:
         auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "Framebuffer error: " << fboStatus << std::endl;
-
-
-        loadObj("resources/wolf/Wolf_obj.obj");
 
 
 
