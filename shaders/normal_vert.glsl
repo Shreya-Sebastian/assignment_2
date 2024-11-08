@@ -7,8 +7,7 @@ uniform mat3 normalModelMatrix; // Normal matrix for transforming normals
 layout(location = 0) in vec3 position;      // Vertex position
 layout(location = 1) in vec3 normal;        // Vertex normal
 layout(location = 2) in vec2 texCoord;      // Texture coordinates
-layout(location = 3) in vec3 tangent;       // Tangent vector
-layout(location = 4) in vec3 bitangent;     // Bitangent vector
+layout(location = 3) in vec4 tangent;       // Tangent vector
 
 out vec3 fragPosition;   // Transformed position in world space
 out vec3 fragNormal;     // Transformed normal in world space
@@ -26,10 +25,17 @@ void main()
     fragTexCoord = texCoord;
 
     // Transform tangent and bitangent to world space
-    vec3 T = normalize(normalModelMatrix * tangent);
-    vec3 B = normalize(normalModelMatrix * bitangent);
-    vec3 N = fragNormal;
+    //vec3 T = normalize(normalModelMatrix * tangent);
+    //vec3 B = normalize(normalModelMatrix * bitangent);
+    //vec3 N = fragNormal;
+
+
+   vec3 T = normalize(vec3(modelMatrix * tangent));
+   vec3 N = normalize(vec3(modelMatrix * vec4(normal,    0.0)));
+   vec3 B = cross(N, T) * tangent.w;
+   //vec3 B = normalize(vec3(modelMatrix * vec4(bitangent, 0.0)));
+   
 
     // Construct the TBN matrix
-    TBN = mat3(T, B, N);
+  TBN = mat3(T, B, N);
 }
