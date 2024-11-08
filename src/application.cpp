@@ -420,6 +420,8 @@ public:
             ImGui::SliderFloat("Shininess", &shininess, 0.0f, 256.0f);
             ImGui::Checkbox("Specular", &specular);
             ImGui::Checkbox("Bezier Curve Movement", &m_bezierMovementEnabled);
+            ImGui::Checkbox("Enable Environment Mapping", &m_envMapEnabled);
+
 
             ImGui::End();
 
@@ -512,7 +514,7 @@ public:
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
             // Switch to the reflection shader for the reflective cube
-            m_reflectionShader.bind();
+            /*m_reflectionShader.bind();
 
 
             // // Parent Cube Transformation (environment-mapped reflective cube)
@@ -529,7 +531,30 @@ public:
             glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0); // Set the cubemap sampler uniform
 
             // Draw the parent (larger) cube with reflection
-            m_meshes[0].draw(m_reflectionShader);
+            m_meshes[0].draw(m_reflectionShader);*/
+
+            if (m_envMapEnabled) {
+                // Use reflection shader for environment mapping
+                m_reflectionShader.bind();
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
+                glUniform3fv(m_reflectionShader.getUniformLocation("cameraPosition"), 1, glm::value_ptr(cameraPos));
+
+                // Bind the cubemap texture for environment mapping
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+                glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0);
+            }
+            else {
+                // Use default shader
+                m_defaultShader.bind();
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix * m_viewMatrix * modelMatrixParent));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+            }
+
+            // Draw the larger cube
+            m_meshes[0].draw(m_envMapEnabled ? m_reflectionShader : m_defaultShader);
 
             m_defaultShader.bind();
 
@@ -1010,6 +1035,9 @@ private:
     bool collisionDetected = false; // Add this as a private member in your Application class
 
     float m_timer{ 0.f };
+
+    bool m_envMapEnabled = true;  // Enable environment map by default
+
 };
 
 int main()
