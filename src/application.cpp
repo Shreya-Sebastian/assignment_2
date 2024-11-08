@@ -249,42 +249,12 @@ public:
                 onMouseReleased(button, mods);
             });
 
-        //m_meshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/dragon.obj");
-
-        // Create a square mesh and convert it to a GPUMesh
-        /*Mesh cpuSquareMesh = createSquareMesh();
-        GPUMesh gpuSquareMesh(cpuSquareMesh);
-
-        // Add the square mesh to the list of meshes
-        m_meshes.push_back(std::move(gpuSquareMesh));*/
-
-        // Load the mars.png texture
-        unsigned int m_textureID = loadTexture("resources/mars.png");
-        if (m_textureID == 0) {
-            std::cerr << "Failed to load mars texture!" << std::endl;
-        }
-        else {
-            std::cout << "Mars texture loaded with ID: " << m_textureID << std::endl;
-        }
-
-        // Create a cube mesh and convert it to a GPUMesh
-        /*Mesh cpuCubeMesh = createCubeMesh();
-        GPUMesh gpuCubeMesh(cpuCubeMesh);
-
-        // Add the cube mesh to the list of meshes
-        m_meshes.push_back(std::move(gpuCubeMesh));*/
-
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
         wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
-        //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
         m_meshes.emplace_back(createCubeMesh());
-
-        /*GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // Create the cube mesh
-        m_meshes.push_back(cubeMesh1);                  // Add first instance of the cube
-        m_meshes.push_back(cubeMesh1);*/
 
 
         // Defining the faces of the skybox
@@ -303,18 +273,6 @@ public:
             startPoint4, controlPoint7, controlPoint8, endPoint4  // Fourth curve
         };
         generateArcLengthTable(controlPoints);
-
-
-        // Load textures for animation
-        std::vector<std::string> animationFrames = {
-            "resources/aerial_grass_rock_diff_2k.jpg",
-            "resources/aerial_rocks_02_diff_2k.jpg",
-            "resources/rocky_terrain_diff_2k.jpg",
-            "resources/rocky_terrain_02_diff_2k.jpg"
-        };
-        loadAnimationTextures(animationFrames);
-
-        // Initialize your other resources (e.g., cube mesh)
 
         try {
 
@@ -377,11 +335,6 @@ public:
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
         m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(2.5f, 2.0f, 2.5f));
-        //glm::mat4 rotationMatrix = glm::rotate(m_modelMatrix_wolf, 5.0f, glm::vec3(0.0f,1.0f,0.0f));
-        //glm::vec3 directio_m = glm::normalize(camera.cameraPos() - glm::vec3(0.0f,0.0f, 0.0f));
-        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f), directio_m, glm::vec3(0.0f, 1.0f, 0.0f));
-        //glm::mat4 rotationMatrix = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), direction, glm::vec3(0.0f, 1.0f, 0.0f));
-        //m_modelMatrix_wolf = rotationMatrix * m_modelMatrix_wolf;
 
 
         // Prepare framebuffer rectangle VBO and VAO
@@ -467,9 +420,6 @@ public:
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
         }
-
-
-
 
         GLuint wolfVBO, wolfVAO, wolfNBO, wolfTBO;
         glGenVertexArrays(1, &wolfVAO);
@@ -562,25 +512,12 @@ public:
 
         float lastFrameTime = static_cast<float>(glfwGetTime());
         const float positionTolerance = 0.01f;  // Tolerance for reaching the ends
-        //float deltaTime = currentFrameTime - lastFrameTime;
-        //lastFrameTime = currentFrameTime;
-        //time += speed * deltaTime;  // deltaTime is the frame time
-        //if (time > 1.0f) time -= 1.0f;
 
         glm::vec3 bezierPosition;
         glm::vec3 randomPosition = glm::vec3(0.0f);
         // Seed random generator
         std::mt19937 rng(static_cast<unsigned int>(glfwGetTime()));
         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-
-        // Variables to control oscillation speed and amplitude
-        //float oscillationSpeedX = 0.5f; // Speed for left-right movement
-        //float oscillationSpeedY = 0.3f; // Speed for up-down movement
-        //float amplitudeX = 1.0f; // Distance it moves left and right
-        //float amplitudeY = 1.0f; // Distance it moves up and down
-        // Adding a phase offset to vary the starting position each time bezier movement is disabled
-        //float phaseOffsetX = 3.14159f * static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Random phase offset for x
-        //float phaseOffsetY = 3.14159f * static_cast<float>(rand()) / static_cast<float>(RAND_MAX); // Random phase offset for y
 
         // Initialize position and direction variables if not already done
         float cubeXPosition = 0.0f; // Cube�s X position
@@ -597,10 +534,6 @@ public:
 
         while (!m_window.shouldClose()) {
             printf("%i", followedModel);
-            // Update input and animations
-            //m_window.updateInput();
-
-            //updateCameraPosition();
 
             // Time logic for the bezier curve moves
             float currentFrameTime = static_cast<float>(glfwGetTime());
@@ -611,10 +544,10 @@ public:
 
             // Time logic for the multiple texture loading
             m_timeAccumulator += deltaTime;
-            if (m_timeAccumulator >= m_animationSpeed) {
+            /*if (m_timeAccumulator >= m_animationSpeed) {
                 m_timeAccumulator = 0.0f;
                 m_currentFrame = (m_currentFrame + 1) % m_animationTextures.size();
-            }
+            }*/
 
 
             //glm::vec3 bezierPosition = getConstantSpeedPosition(time);
@@ -749,21 +682,18 @@ public:
                 // Move the cube left/right in the X axis
                 cubeXPosition += movementSpeed * xDirection;
                 if (cubeXPosition > xBoundary || cubeXPosition < -xBoundary) {
-                    xDirection *= -1.0f; // Reverse direction when hitting the boundary
+                    xDirection *= -1.0f; 
                 }
 
                 // Move the cube up/down in the Y axis
                 cubeYPosition += movementSpeed * yDirection;
                 if (cubeYPosition > yBoundary || cubeYPosition < -yBoundary) {
-                    yDirection *= -1.0f; // Reverse direction when hitting the boundary
+                    yDirection *= -1.0f; 
                 }
 
                 // Set the cube position, keeping Z position unchanged
                 cubePosition = glm::vec3(cubeXPosition, cubeYPosition, 0.0f);
             }
-
-            // Print out the value of hasTexCoords for debugging
-            // std::cout << "hasTexCoords value: " << m_meshes[0].hasTextureCoords() << std::endl;
 
             // Parent Cube Transformation (environment-mapped reflective cube)
             glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), cubePosition);
@@ -825,25 +755,24 @@ public:
             AABB cubeAABB = getAABB(modelMatrixParent, cubeMinPoint, cubeMaxPoint); // Cube's AABB
             AABB wolfAABB = getAABB(m_modelMatrix_wolf, wolfMinPoint, wolfMaxPoint); // Wolf's AABB
 
-            // In your main loop
             if (isColliding(cubeAABB, wolfAABB)) {
                 if (!collisionDetected) {
-                    collisionCounter++; // Increment counter on first collision detection
+                    collisionCounter++; 
                     std::cout << "Collision detected! Counter: " << collisionCounter << std::endl;
-                    collisionDetected = true; // Set the flag to indicate a collision has been handled
+                    collisionDetected = true; 
                 }
             }
             else {
-                collisionDetected = false; // Reset flag when objects are no longer colliding
+                collisionDetected = false;
             }
 
             glDepthFunc(GL_LEQUAL); // Ensure skybox depth is always 1.0
 
-            // Use skybox shader
+
             m_skyboxShader.bind();
 
             // Modify the view matrix to ignore translation (keep rotation only)
-            glm::mat4 viewMatrix = glm::mat4(glm::mat3(m_viewMatrix)); // Remove translation
+            glm::mat4 viewMatrix = glm::mat4(glm::mat3(m_viewMatrix)); 
             glUniformMatrix4fv(m_skyboxShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(viewMatrix));
             glUniformMatrix4fv(m_skyboxShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
             glUniformMatrix4fv(m_skyboxShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
@@ -853,7 +782,6 @@ public:
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 
-            // Draw the skybox
             glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
 
@@ -1097,55 +1025,26 @@ public:
         return glm::mix(bezierPoints[segment - 1], bezierPoints[segment], segmentT);
     }
 
+    // Function to calculate the bezier curve (literally with the formula)
     glm::vec3 evaluateBezier(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, float t) {
         float u = 1.0f - t;
         return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
     }
 
-    // Function to load animation textures
-    void loadAnimationTextures(const std::vector<std::string>& framePaths) {
-        for (const auto& path : framePaths) {
-            unsigned int textureID = loadTexture(path);
-            if (textureID != 0) {
-                m_animationTextures.push_back(textureID);
-                std::cout << "Loaded texture: " << path << " with ID: " << textureID << std::endl;
-            }
-            else {
-                std::cerr << "Failed to load texture: " << path << std::endl;
-            }
-        }
-    }
-
-    // Function to load a texture with ID
-    unsigned int loadTexture(const std::filesystem::path& path) {
-        Image image(path);
-        unsigned int textureID;
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        GLenum format = (image.channels == 4) ? GL_RGBA : GL_RGB;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.get_data());
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        return textureID;
-    }
-
+    // Function to know if object a is colliding with object b using AABB collision boundary boxes
     bool isColliding(const AABB& a, const AABB& b) {
         return (a.x_min < b.x_max && a.x_max > b.x_min &&
             a.y_min < b.y_max && a.y_max > b.y_min);
     }
 
+    // Function to get the boundary boxes
     AABB getAABB(const glm::mat4& modelMatrix, const glm::vec3& minPoint, const glm::vec3& maxPoint) {
         glm::vec3 min = glm::vec3(modelMatrix * glm::vec4(minPoint, 1.0f));
         glm::vec3 max = glm::vec3(modelMatrix * glm::vec4(maxPoint, 1.0f));
         return AABB{ min.x, max.x, min.y, max.y };
     }
 
+    // Function to load the cube map
     unsigned int loadCubemap(const std::vector<std::string>& faces) {
         unsigned int textureID;
         glGenTextures(1, &textureID);
@@ -1173,6 +1072,7 @@ public:
         return textureID;
     }
 
+    // Function to load an object file, used for the wolf
     void loadObj(const std::string& filepath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
@@ -1234,11 +1134,7 @@ private:
     Window m_window;
 
     unsigned int cubemapTexture;
-    //GPUMesh m_squareMesh;
     unsigned int m_textureID;
-
-    //GPUMesh m_skyboxMesh;
-    //unsigned int m_cubemapTextureID;
 
     const int NUM_SAMPLES = 100;
     bool m_bezierMovementEnabled;
