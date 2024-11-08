@@ -447,13 +447,10 @@ public:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTexture, 0);
 
-        // Tell OpenGL we need to draw to both attachments
+  
         unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
         glDrawBuffers(2, attachments);
 
-        auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "Framebuffer error: " << fboStatus << std::endl;
 
         unsigned int pingpongFBO[2];
         unsigned int pingpongBuffer[2];
@@ -469,10 +466,6 @@ public:
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
-
-            fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-            if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
-                std::cout << "Ping-Pong Framebuffer error: " << fboStatus << std::endl;
         }
 
 
@@ -655,6 +648,10 @@ public:
                 m_viewMatrix = camera.viewMatrix();
 
                 ImGui::EndCombo();
+            }
+            if (ImGui::Button("Top view")) {
+                camera.setTopView();
+                m_viewMatrix = camera.viewMatrix();
             }
             ImGui::Text("Post processing options");
             ImGui::Checkbox("Inverse color", &inverseColor);
@@ -863,9 +860,7 @@ public:
             // Reset depth function to default
             glDepthFunc(GL_LESS);
 
-            // Bounce the image data around to blur multiple times
             bool horizontal = true, first_iteration = true;
-            // Amount of time to bounce the blur
             int amount = 2;
             m_bloomShader.bind();
             glUniform1i(m_bloomShader.getUniformLocation("screenTexture"), 0);
@@ -873,25 +868,20 @@ public:
             {
                 glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
                 glUniform1i(m_bloomShader.getUniformLocation("horizontal"), horizontal);
-
-                // In the first bounc we want to get the data from the bloomTexture
                 if (first_iteration)
                 {
                     glBindTexture(GL_TEXTURE_2D, bloomTexture);
                     first_iteration = false;
                 }
-                // Move the data between the pingPong textures
                 else
                 {
                     glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
                 }
 
-                // Render the image
                 glBindVertexArray(rectVAO);
                 glDisable(GL_DEPTH_TEST);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
 
-                // Switch between vertical and horizontal blurring
                 horizontal = !horizontal;
             }
 
@@ -902,11 +892,9 @@ public:
             glUniform1i(m_fboShader.getUniformLocation("inverseColor"), inverseColor);
             glUniform1i(m_fboShader.getUniformLocation("blackAndWhite"), blacnAndWhite);
             glUniform1i(m_fboShader.getUniformLocation("bloomBlur"), bloom);
-            // Bind the default framebuffer
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            // Draw the framebuffer rectangle
             glBindVertexArray(rectVAO);
-            glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
+            glDisable(GL_DEPTH_TEST); 
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, framebufferTexture);
             glActiveTexture(GL_TEXTURE1);
@@ -987,7 +975,7 @@ public:
 
         }
 
-        if (key == GLFW_KEY_L) { //top view
+        if (key == GLFW_KEY_L) { 
             camera.setTopView();
         }
 
