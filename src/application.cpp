@@ -123,10 +123,98 @@ unsigned int skyboxIndices[] = {
     6, 2, 1
 };
 
+
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+
+void createPlane() {
+
+    // positions
+    glm::vec3 pos1(-1.0, 1.0, 0.0);
+    glm::vec3 pos2(-1.0, -1.0, 0.0);
+    glm::vec3 pos3(1.0, -1.0, 0.0);
+    glm::vec3 pos4(1.0, 1.0, 0.0);
+    // texture coordinates
+    glm::vec2 uv1(0.0, 1.0);
+    glm::vec2 uv2(0.0, 0.0);
+    glm::vec2 uv3(1.0, 0.0);
+    glm::vec2 uv4(1.0, 1.0);
+    // normal vector
+    glm::vec3 nm(0.0, 0.0, 1.0);
+
+    // calculate tangent/bitangent vectors of both triangles
+    glm::vec3 tangent1, bitangent1;
+    glm::vec3 tangent2, bitangent2;
+    // triangle 1
+    // ----------
+    glm::vec3 edge1 = pos2 - pos1;
+    glm::vec3 edge2 = pos3 - pos1;
+    glm::vec2 deltaUV1 = uv2 - uv1;
+    glm::vec2 deltaUV2 = uv3 - uv1;
+
+    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+    bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+    bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+    bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+    // triangle 2
+    // ----------
+    edge1 = pos3 - pos1;
+    edge2 = pos4 - pos1;
+    deltaUV1 = uv3 - uv1;
+    deltaUV2 = uv4 - uv1;
+
+    f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+    tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+    tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+
+    bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+    bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+    bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+    float quadVertices[] = {
+        // positions            // normal         // texcoords  // tangent                          // bitangent
+        pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+        pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+        pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+        pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+        pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+        pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+    };
+
+    // configure plane VAO
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    }
+
 struct AABB {
     float x_min, x_max;
     float y_min, y_max;
 };
+
 
 class Application {
 public:
@@ -203,6 +291,16 @@ public:
             normalBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/normal_frag.glsl");
             m_normalShader = normalBuilder.build();
 
+            ShaderBuilder fboBuilder;
+            fboBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/framebuffer_vert.glsl");
+            fboBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/framebuffer_frag.glsl");
+            m_fboShader = fboBuilder.build();
+
+            ShaderBuilder bloomBuilder;
+            bloomBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/framebuffer_vert.glsl");
+            bloomBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/bloom_frag.glsl");
+            m_bloomShader = bloomBuilder.build();
+
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
@@ -242,8 +340,60 @@ public:
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+        // Create Frame Buffer Object
+        unsigned int FBO;
+        glGenFramebuffers(1, &FBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
-        loadObj("resources/wolf/Wolf_obj.obj");
+        // Create Framebuffer Texture
+        unsigned int framebufferTexture;
+        glGenTextures(1, &framebufferTexture);
+        glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); // Prevents edge bleeding
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
+
+        // Create Render Buffer Object
+        unsigned int RBO;
+        glGenRenderbuffers(1, &RBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 1024);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+
+        unsigned int bloomTexture;
+        glGenTextures(1, &bloomTexture);
+        glBindTexture(GL_TEXTURE_2D, bloomTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTexture, 0);
+
+  
+        unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        glDrawBuffers(2, attachments);
+
+
+        unsigned int pingpongFBO[2];
+        unsigned int pingpongBuffer[2];
+        glGenFramebuffers(2, pingpongFBO);
+        glGenTextures(2, pingpongBuffer);
+        for (unsigned int i = 0; i < 2; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+            glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
+        }
 
         GLuint wolfVBO, wolfVAO, wolfNBO, wolfTBO;
         glGenVertexArrays(1, &wolfVAO);
@@ -403,6 +553,14 @@ public:
 
                 ImGui::EndCombo();
             }
+            if (ImGui::Button("Top view")) {
+                camera.setTopView();
+                m_viewMatrix = camera.viewMatrix();
+            }
+            ImGui::Text("Post processing options");
+            ImGui::Checkbox("Inverse color", &inverseColor);
+            ImGui::Checkbox("Black and white", &blacnAndWhite);
+            ImGui::Checkbox("Bloom", &bloom);
 
             ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
             ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
@@ -447,7 +605,7 @@ public:
                 glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
                 glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
                 glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
                 glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
                 glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
@@ -469,7 +627,7 @@ public:
                 glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
                 glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
                 glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
                 glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
                 glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
@@ -624,6 +782,48 @@ public:
             // Reset depth function to default
             glDepthFunc(GL_LESS);
 
+            bool horizontal = true, first_iteration = true;
+            int amount = 2;
+            m_bloomShader.bind();
+            glUniform1i(m_bloomShader.getUniformLocation("screenTexture"), 0);
+            for (unsigned int i = 0; i < amount; i++)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+                glUniform1i(m_bloomShader.getUniformLocation("horizontal"), horizontal);
+                if (first_iteration)
+                {
+                    glBindTexture(GL_TEXTURE_2D, bloomTexture);
+                    first_iteration = false;
+                }
+                else
+                {
+                    glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
+                }
+
+                glBindVertexArray(rectVAO);
+                glDisable(GL_DEPTH_TEST);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                horizontal = !horizontal;
+            }
+
+
+            m_fboShader.bind();
+            glUniform1i(m_fboShader.getUniformLocation("screenTexture"), 0);
+            glUniform1i(m_fboShader.getUniformLocation("bloomTexture"), 1);
+            glUniform1i(m_fboShader.getUniformLocation("inverseColor"), inverseColor);
+            glUniform1i(m_fboShader.getUniformLocation("blackAndWhite"), blacnAndWhite);
+            glUniform1i(m_fboShader.getUniformLocation("bloomBlur"), bloom);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindVertexArray(rectVAO);
+            glDisable(GL_DEPTH_TEST); 
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
 
             m_window.swapBuffers();
         }
@@ -698,7 +898,7 @@ public:
 
         }
 
-        if (key == GLFW_KEY_L) { //top view
+        if (key == GLFW_KEY_L) { 
             camera.setTopView();
         }
 
@@ -940,6 +1140,9 @@ private:
     Shader m_reflectionShader;
     Shader m_skyboxShader;
     Shader m_normalShader;
+    Shader m_fboShader;
+    Shader m_bloomShader;
+
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
@@ -974,6 +1177,10 @@ private:
     std::vector<glm::vec3> wolfVertices;
     std::vector<glm::vec3> wolfNormals;
     std::vector<glm::vec2> wolfTexCoords;
+  
+    bool inverseColor{ false };
+    bool blacnAndWhite{ false };
+    bool bloom{ false };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
