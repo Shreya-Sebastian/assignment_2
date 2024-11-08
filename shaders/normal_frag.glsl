@@ -31,6 +31,8 @@ const float PI = 3.14159265359;
 
 
 layout(location = 0) out vec4 fragColor;
+layout (location = 1) out vec4 bloomColor;
+
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -152,6 +154,18 @@ kD *= 1.0 - metallic;
 
         fragColor = vec4(accumulatedColor, 1.0);
         }
+
+
+    vec3 someColor = fragColor.rgb;
+    if (someColor.r > 0.05f)
+    someColor.r *= 5.0f;
+
+	// Calculate brightness by adding up all the channels with different weights each
+	float brightness = dot(someColor.rgb, vec3(0.2126f, 0.7152f, 0.0722f));
+    if(brightness > 0.15f)
+        bloomColor = vec4(someColor.rgb, 1.0f);
+    else
+        bloomColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
         
 
 }

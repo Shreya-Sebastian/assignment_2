@@ -302,6 +302,11 @@ public:
             fboBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/framebuffer_frag.glsl");
             m_fboShader = fboBuilder.build();
 
+            ShaderBuilder bloomBuilder;
+            bloomBuilder.addStage(GL_VERTEX_SHADER, RESOURCE_ROOT "shaders/framebuffer_vert.glsl");
+            bloomBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/bloom_frag.glsl");
+            m_bloomShader = bloomBuilder.build();
+
 
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
@@ -383,9 +388,44 @@ public:
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 1024);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
+
+        unsigned int bloomTexture;
+        glGenTextures(1, &bloomTexture);
+        glBindTexture(GL_TEXTURE_2D, bloomTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, bloomTexture, 0);
+
+        // Tell OpenGL we need to draw to both attachments
+        unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+        glDrawBuffers(2, attachments);
+
         auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
             std::cout << "Framebuffer error: " << fboStatus << std::endl;
+
+        unsigned int pingpongFBO[2];
+        unsigned int pingpongBuffer[2];
+        glGenFramebuffers(2, pingpongFBO);
+        glGenTextures(2, pingpongBuffer);
+        for (unsigned int i = 0; i < 2; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+            glBindTexture(GL_TEXTURE_2D, pingpongBuffer[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongBuffer[i], 0);
+
+            fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+                std::cout << "Ping-Pong Framebuffer error: " << fboStatus << std::endl;
+        }
 
 
         loadObj("resources/wolf/Wolf_obj.obj");
@@ -546,6 +586,7 @@ public:
             ImGui::Text("Post processing options");
             ImGui::Checkbox("Inverse color", &inverseColor);
             ImGui::Checkbox("Black and white", &blacnAndWhite);
+            ImGui::Checkbox("Bloom", &bloom);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
             ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
             ImGui::Checkbox("Normal Mapping", &m_normalMapping);
@@ -588,7 +629,7 @@ public:
                 glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf));
                 glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
                 glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
                 glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
                 glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
@@ -610,7 +651,7 @@ public:
                 glUniformMatrix4fv(m_normalShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(mvpMatrix));
                 const glm::mat3 normalModelMatrix = glm::inverseTranspose(glm::mat3(m_modelMatrix_wolf_2));
                 glUniformMatrix3fv(m_normalShader.getUniformLocation("normalModelMatrix"), 1, GL_FALSE, glm::value_ptr(normalModelMatrix));
-                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 1.0f)));
+                glUniform3fv(m_normalShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
                 glUniform3fv(m_normalShader.getUniformLocation("lightPos"), 1, glm::value_ptr(lightPos));
                 glUniform3fv(m_normalShader.getUniformLocation("lightColor"), 1, glm::value_ptr(lightColor));
                 glUniform3fv(m_normalShader.getUniformLocation("kd"), 1, glm::value_ptr(kd));
@@ -709,16 +750,54 @@ public:
             // Reset depth function to default
             glDepthFunc(GL_LESS);
 
+            // Bounce the image data around to blur multiple times
+            bool horizontal = true, first_iteration = true;
+            // Amount of time to bounce the blur
+            int amount = 2;
+            m_bloomShader.bind();
+            glUniform1i(m_bloomShader.getUniformLocation("screenTexture"), 0);
+            for (unsigned int i = 0; i < amount; i++)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+                glUniform1i(m_bloomShader.getUniformLocation("horizontal"), horizontal);
+
+                // In the first bounc we want to get the data from the bloomTexture
+                if (first_iteration)
+                {
+                    glBindTexture(GL_TEXTURE_2D, bloomTexture);
+                    first_iteration = false;
+                }
+                // Move the data between the pingPong textures
+                else
+                {
+                    glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
+                }
+
+                // Render the image
+                glBindVertexArray(rectVAO);
+                glDisable(GL_DEPTH_TEST);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+
+                // Switch between vertical and horizontal blurring
+                horizontal = !horizontal;
+            }
+
+
             m_fboShader.bind();
             glUniform1i(m_fboShader.getUniformLocation("screenTexture"), 0);
+            glUniform1i(m_fboShader.getUniformLocation("bloomTexture"), 1);
             glUniform1i(m_fboShader.getUniformLocation("inverseColor"), inverseColor);
             glUniform1i(m_fboShader.getUniformLocation("blackAndWhite"), blacnAndWhite);
+            glUniform1i(m_fboShader.getUniformLocation("bloomBlur"), bloom);
             // Bind the default framebuffer
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             // Draw the framebuffer rectangle
             glBindVertexArray(rectVAO);
             glDisable(GL_DEPTH_TEST); // prevents framebuffer rectangle from being discarded
+            glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
@@ -974,6 +1053,7 @@ private:
     Shader m_skyboxShader;
     Shader m_normalShader;
     Shader m_fboShader;
+    Shader m_bloomShader;
 
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
@@ -1007,6 +1087,7 @@ private:
 
     bool inverseColor{ false };
     bool blacnAndWhite{ false };
+    bool bloom{ false };
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
