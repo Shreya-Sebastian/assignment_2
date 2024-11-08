@@ -1,5 +1,7 @@
 #version 410
 
+
+
 uniform sampler2D colorMap;
 uniform sampler2D normalMap;
 
@@ -76,14 +78,9 @@ void main()
 
     vec3 Nnormal = texture(normalMap, fragTexCoord).rgb;
     Nnormal = Nnormal * 2.0 - 1.0;
-    Nnormal = normalize(Nnormal);
+    Nnormal = normalize(-1* Nnormal);
 
     vec3 normal = normalize(fragNormal);
-
-    if (normalMapping){
-        normal = Nnormal;
-    }
-
     vec3 V = normalize(cameraPos - fragPosition);
     vec3 L = normalize(lightPos);
     vec3 objectColor = color;
@@ -118,6 +115,9 @@ kD *= 1.0 - metallic;
 
     float NdotL = max(dot(normal, lightDir), 0.0);    
     
+    if (normalMapping){
+        NdotL = dot(Nnormal, light_dir);
+    }
 
     Lo += (kD * objectColor / PI + specular) * radiance * NdotL;
 

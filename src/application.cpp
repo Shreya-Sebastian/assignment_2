@@ -216,8 +216,7 @@ public:
 
         GPUMesh cubeMesh1 = GPUMesh(createCubeMesh());  // First cube mesh
         GPUMesh cubeMesh2 = GPUMesh(createCubeMesh());  // Second cube mesh
-        wolfMeshes.emplace_back(createCubeMesh());
-            //GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
+        wolfMeshes = GPUMesh::loadMeshGPU(RESOURCE_ROOT "resources/wolf/Wolf_obj.obj");
         //for (auto& wolf : wolfMeshes) wolf.setNormalMap(RESOURCE_ROOT "resources/textures/fur_normalmap.jpg");
 
         m_meshes.emplace_back(createCubeMesh());  // Construct first cube mesh in-place
