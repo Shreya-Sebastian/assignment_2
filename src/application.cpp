@@ -625,7 +625,7 @@ public:
 
             
             m_normalShader.bind();
-            glm::vec3 lightPos = glm::vec3(1.0f);
+            glm::vec3 lightPos = glm::vec3(1.0f, 1.0f, 1.0f);
 
             
             for (GPUMesh& mesh : wolfMeshes) {
@@ -887,6 +887,32 @@ public:
                 camera.setFollowCharacter(m_modelMatrix_wolf_2);
             }
             else camera.moveRight();
+        }
+
+        if (key == GLFW_KEY_SPACE) {
+            if (followedModel == 0) camera.moveUp();
+            else if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+
+        }
+
+        if (key == GLFW_KEY_E) {
+            if (followedModel == 0) camera.moveDown();
+            else if (followedModel == 1) {
+                m_modelMatrix_wolf = glm::translate(m_modelMatrix_wolf, -cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f)); //moves object
+                camera.setFollowCharacter(m_modelMatrix_wolf);
+            }
+            else if (followedModel == 2) {
+                m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, -cameraSpeed * glm::vec3(0.0f, 1.0f, 0.0f));
+                camera.setFollowCharacter(m_modelMatrix_wolf_2);
+            }
+
         }
 
         if (key == GLFW_KEY_LEFT) {

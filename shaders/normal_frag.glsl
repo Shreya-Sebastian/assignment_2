@@ -98,6 +98,7 @@ void main()
     { 
         
         vec3 Lo = vec3(0.0);
+
         vec3 lightDir = normalize(lightPos-fragPosition);
         vec3 H = normalize(V + lightDir);
         float distance = length(lightPos - fragPosition);

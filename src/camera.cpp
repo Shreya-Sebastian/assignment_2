@@ -84,6 +84,17 @@ void Camera::moveRight() {
     m_target += right * cameraSpeed;
 }
 
+void Camera::moveUp() {
+    m_position += m_up * cameraSpeed;
+    m_target += m_up * cameraSpeed;
+}
+
+void Camera::moveDown() {
+    m_position -= m_up * cameraSpeed;
+    m_target -= m_up * cameraSpeed;
+}
+
+
 void Camera::lookCharacter(const glm::mat4 modelMatrix) {
     glm::vec3 modelPosition = glm::vec3(modelMatrix[3][0], modelMatrix[3][1], modelMatrix[3][2]);
     //m_target = modelPosition;

@@ -17,6 +17,8 @@ public:
     void moveLeft();
     void moveRight();
     void moveBack();
+    void moveUp();
+    void moveDown();
     void rotate(const glm::vec3& objectPosition, float degrees, bool up);
     void lookCharacter(const glm::mat4 modelMatrix);
 
