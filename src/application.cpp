@@ -90,18 +90,6 @@ Mesh createCubeMesh() {
     return cubeMesh;
 }
 
-float rectangleVertices[] =
-{
-    // Coords    // texCoords
-     1.0f, -1.0f,  1.0f, 0.0f,
-    -1.0f, -1.0f,  0.0f, 0.0f,
-    -1.0f,  1.0f,  0.0f, 1.0f,
-
-     1.0f,  1.0f,  1.0f, 1.0f,
-     1.0f, -1.0f,  1.0f, 0.0f,
-    -1.0f,  1.0f,  0.0f, 1.0f
-};
-
 float skyboxVertices[] = {
     // Positions          
     -1.0f,  1.0f, -1.0f,  // 0: Top-left-front
@@ -313,7 +301,6 @@ public:
             bloomBuilder.addStage(GL_FRAGMENT_SHADER, RESOURCE_ROOT "shaders/bloom_frag.glsl");
             m_bloomShader = bloomBuilder.build();
 
-
             // Any new shaders can be added below in similar fashion.
             // ==> Don't forget to reconfigure CMake when you do!
             //     Visual Studio: PROJECT => Generate Cache for ComputerGraphics
@@ -335,19 +322,6 @@ public:
         glm::vec3 childColor(0.0, 0.4, 1.0);
         glm::vec3 parentColor(1.0, 1.0, 0.0);
         m_modelMatrix_wolf_2 = glm::translate(m_modelMatrix_wolf_2, glm::vec3(2.5f, 2.0f, 2.5f));
-
-
-        // Prepare framebuffer rectangle VBO and VAO
-        unsigned int rectVAO, rectVBO;
-        glGenVertexArrays(1, &rectVAO);
-        glGenBuffers(1, &rectVBO);
-        glBindVertexArray(rectVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
         // Set up the skybox VAO, VBO, and EBO
         unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -520,8 +494,8 @@ public:
         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
         // Initialize position and direction variables if not already done
-        float cubeXPosition = 0.0f; // Cube�s X position
-        float cubeYPosition = 0.0f; // Cube�s Y position
+        float cubeXPosition = 0.0f; // Cube’s X position
+        float cubeYPosition = 0.0f; // Cube’s Y position
         float xDirection = 1.0f;    // X movement direction
         float yDirection = 1.0f;    // Y movement direction
 
@@ -560,9 +534,6 @@ public:
             ImGui::InputInt("This is the collision counter", &collisionCounter);
             ImGui::Text("Value is: %i", collisionCounter);
             ImGui::Checkbox("Use material if no texture", &m_useMaterial);
-
-
-
             const char* options[] = { "Free camera", "Wolf 1", "Wolf 2" };
 
             if (ImGui::BeginCombo("Choose Followed Model", options[followedModel])) {
@@ -590,6 +561,7 @@ public:
             ImGui::Checkbox("Inverse color", &inverseColor);
             ImGui::Checkbox("Black and white", &blacnAndWhite);
             ImGui::Checkbox("Bloom", &bloom);
+
             ImGui::ColorEdit3("Light Color", glm::value_ptr(lightColor));
             ImGui::ColorEdit3("Wolf Color", glm::value_ptr(parentColor));
             ImGui::Checkbox("Normal Mapping", &m_normalMapping);
@@ -606,6 +578,8 @@ public:
             ImGui::SliderFloat("Shininess", &shininess, 0.0f, 256.0f);
             ImGui::Checkbox("Specular", &specular);
             ImGui::Checkbox("Bezier Curve Movement", &m_bezierMovementEnabled);
+            ImGui::Checkbox("Enable Environment Mapping", &m_envMapEnabled);
+
 
             ImGui::End();
 
@@ -616,8 +590,6 @@ public:
 
 
             // Clear the screen
-           glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -695,16 +667,15 @@ public:
                 cubePosition = glm::vec3(cubeXPosition, cubeYPosition, 0.0f);
             }
 
-            // Parent Cube Transformation (environment-mapped reflective cube)
             glm::mat4 modelMatrixParent = glm::translate(glm::mat4(1.0f), cubePosition);
             modelMatrixParent = glm::scale(modelMatrixParent, glm::vec3(0.2f));
             modelMatrixParent = glm::rotate(modelMatrixParent, angle1, glm::vec3(0.0f, 1.0f, 0.0f));
 
             // Switch to the reflection shader for the reflective cube
-            m_reflectionShader.bind();
+            /*m_reflectionShader.bind();
 
 
-            // Set the MVP matrices
+            // // Parent Cube Transformation (environment-mapped reflective cube)
             glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
             glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
             glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
@@ -718,7 +689,30 @@ public:
             glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0); // Set the cubemap sampler uniform
 
             // Draw the parent (larger) cube with reflection
-            m_meshes[0].draw(m_reflectionShader);
+            m_meshes[0].draw(m_reflectionShader);*/
+
+            if (m_envMapEnabled) {
+                // Use reflection shader for environment mapping
+                m_reflectionShader.bind();
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("model"), 1, GL_FALSE, glm::value_ptr(modelMatrixParent));
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("view"), 1, GL_FALSE, glm::value_ptr(m_viewMatrix));
+                glUniformMatrix4fv(m_reflectionShader.getUniformLocation("projection"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix));
+                glUniform3fv(m_reflectionShader.getUniformLocation("cameraPosition"), 1, glm::value_ptr(cameraPos));
+
+                // Bind the cubemap texture for environment mapping
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+                glUniform1i(m_reflectionShader.getUniformLocation("skybox"), 0);
+            }
+            else {
+                // Use default shader
+                m_defaultShader.bind();
+                glUniformMatrix4fv(m_defaultShader.getUniformLocation("mvpMatrix"), 1, GL_FALSE, glm::value_ptr(m_projectionMatrix * m_viewMatrix * modelMatrixParent));
+                glUniform3fv(m_defaultShader.getUniformLocation("color"), 1, glm::value_ptr(parentColor));
+            }
+
+            // Draw the larger cube
+            m_meshes[0].draw(m_envMapEnabled ? m_reflectionShader : m_defaultShader);
 
             m_defaultShader.bind();
 
@@ -828,6 +822,7 @@ public:
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, pingpongBuffer[!horizontal]);
             glDrawArrays(GL_TRIANGLES, 0, 6);
+
 
 
             m_window.swapBuffers();
@@ -1174,6 +1169,7 @@ private:
     Shader m_fboShader;
     Shader m_bloomShader;
 
+
     std::vector<GPUMesh> m_meshes;
     std::vector<GPUMesh> wolfMeshes;
     Texture m_texture;
@@ -1204,7 +1200,6 @@ private:
     bool wolf2pbr{ true };
     int followedModel{ 0 };
 
-
     std::vector<glm::vec3> wolfVertices;
     std::vector<glm::vec3> wolfNormals;
     std::vector<glm::vec2> wolfTexCoords;
@@ -1212,7 +1207,6 @@ private:
     bool inverseColor{ false };
     bool blacnAndWhite{ false };
     bool bloom{ false };
-
 
     glm::vec3 cameraTarget = glm::vec3(0.0f);
     glm::vec3 cameraPos = glm::vec3(-1, 1, -1);
@@ -1274,6 +1268,9 @@ private:
     bool collisionDetected = false; // Add this as a private member in your Application class
 
     float m_timer{ 0.f };
+
+    bool m_envMapEnabled = true;  // Enable environment map by default
+
 };
 
 int main()
