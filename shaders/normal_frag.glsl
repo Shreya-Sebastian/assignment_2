@@ -13,6 +13,7 @@ uniform vec3 color;
 in vec3 fragPosition;
 in vec3 fragNormal;
 in vec2 fragTexCoord;
+in mat3 TBN;
 
 uniform vec3 lightPos;
 uniform vec3 cameraPos;
@@ -73,7 +74,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 void main()
 {
 
-    vec3 light_pos = {0.f, 0.f, 20.f};
+    vec3 light_pos = {20.f, 20.f, 20.f};
     vec3 light_dir = normalize(fragPosition - light_pos);
 
     vec3 Nnormal = texture(normalMap, fragTexCoord).rgb;
@@ -84,6 +85,11 @@ void main()
     vec3 V = normalize(cameraPos - fragPosition);
     vec3 L = normalize(lightPos);
     vec3 objectColor = color;
+
+    if (normalMapping){
+        //TBN = transpose(mat3(T, B, N));
+        normal = normalize(Nnormal * TBN) ;  
+    }
 
     if (hasTexCoords) { 
         fragColor = texture(colorMap, fragTexCoord) * vec4(objectColor, 1.0);   
@@ -114,10 +120,7 @@ kD *= 1.0 - metallic;
     
 
     float NdotL = max(dot(normal, lightDir), 0.0);    
-    
-    if (normalMapping){
-        NdotL = dot(Nnormal, light_dir);
-    }
+   
 
     Lo += (kD * objectColor / PI + specular) * radiance * NdotL;
 
