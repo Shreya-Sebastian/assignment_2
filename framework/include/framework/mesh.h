@@ -15,6 +15,7 @@ struct Vertex {
 	glm::vec3 position;
 	glm::vec3 normal;
 	glm::vec2 texCoord; // Texture coordinate
+	glm::vec4 tangent;
 
 	[[nodiscard]] constexpr bool operator==(const Vertex&) const noexcept = default;
 };
@@ -47,3 +48,6 @@ struct Mesh {
 void meshFlipX(Mesh& mesh);
 void meshFlipY(Mesh& mesh);
 void meshFlipZ(Mesh& mesh);
+glm::vec3 safeNormalize(const glm::vec3& v);
+
+void calculateTangents(Mesh& mesh);

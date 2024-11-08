@@ -214,3 +214,68 @@ void meshFlipZ(Mesh& mesh)
         v.normal.z = -v.normal.z;
     }
 }
+
+glm::vec3 safeNormalize(const glm::vec3& v)
+{
+    float len = glm::length(v);
+    return len > 0.0f ? v / len : glm::vec3(0.0f);
+}
+
+void calculateTangents( Mesh& mesh)
+{
+    // Initialize all tangents to zero
+    for (auto& vertex : mesh.vertices) {
+        vertex.tangent = glm::vec4(0.0f);
+    }
+
+    // Loop through each triangle
+    for (size_t i = 0; i < mesh.triangles.size(); i += 3) {
+        // Get the indices for the triangle's vertices
+        unsigned int i0 = mesh.triangles[i].x;
+        unsigned int i1 = mesh.triangles[i].y;
+        unsigned int i2 = mesh.triangles[i].z;
+
+        // Get the vertices of the triangle
+        Vertex& v0 = mesh.vertices[i0];
+        Vertex& v1 = mesh.vertices[i1];
+        Vertex& v2 = mesh.vertices[i2];
+
+        // Calculate the edges of the triangle
+        glm::vec3 edge1 = v1.position - v0.position;
+        glm::vec3 edge2 = v2.position - v0.position;
+
+        // Calculate the difference in UV coordinates
+        glm::vec2 deltaUV1 = v1.texCoord - v0.texCoord;
+        glm::vec2 deltaUV2 = v2.texCoord - v0.texCoord;
+
+        // Check for degenerate UV coordinates
+        float determinant = deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y;
+        if (determinant == 0.0f) {
+            continue; // Skip this triangle if UVs are degenerate
+        }
+        float f = 1.0f / determinant;
+
+        // Calculate the tangent
+        glm::vec3 tangent;
+        tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+        tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+        tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+        tangent = safeNormalize(tangent);
+
+        // Calculate the handedness (bitangent direction) using cross product
+        glm::vec3 normal = safeNormalize(v0.normal);
+        float handedness = (glm::dot(glm::cross(normal, tangent), edge2) < 0.0f) ? -1.0f : 1.0f;
+
+        // Accumulate the tangents into each vertex of the triangle
+        v0.tangent += glm::vec4(tangent, handedness);
+        v1.tangent += glm::vec4(tangent, handedness);
+        v2.tangent += glm::vec4(tangent, handedness);
+    }
+
+    // Normalize the tangents for each vertex
+    for (auto& vertex : mesh.vertices) {
+        vertex.tangent = glm::vec4(safeNormalize(glm::vec3(vertex.tangent)), vertex.tangent.w);
+        printf("%f, %f, %f\n", vertex.tangent.x, vertex.tangent.y, vertex.tangent.z);
+    }
+}
