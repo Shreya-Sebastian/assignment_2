@@ -90,6 +90,17 @@ Mesh createCubeMesh() {
     return cubeMesh;
 }
 
+float rectangleVertices[] =
+{
+    // Coords    // texCoords
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f,  0.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f,
+     1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f
+};
+
 float skyboxVertices[] = {
     // Positions          
     -1.0f,  1.0f, -1.0f,  // 0: Top-left-front
@@ -179,6 +190,7 @@ void createPlane() {
     bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
     bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
     bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
 
 
     float quadVertices[] = {
@@ -339,6 +351,18 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+
+        unsigned int rectVAO, rectVBO;
+        glGenVertexArrays(1, &rectVAO);
+        glGenBuffers(1, &rectVBO);
+        glBindVertexArray(rectVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(rectangleVertices), &rectangleVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
         // Create Frame Buffer Object
         unsigned int FBO;
@@ -590,6 +614,7 @@ public:
 
 
             // Clear the screen
+            glBindFramebuffer(GL_FRAMEBUFFER, FBO);
             glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
